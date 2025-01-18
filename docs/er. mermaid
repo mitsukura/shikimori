@@ -58,3 +58,4 @@ PAYMENT {
   float amount
   date payment_date
 }
+```
