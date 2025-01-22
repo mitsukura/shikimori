@@ -5,7 +5,7 @@ erDiagram
 
 %% エンティティ定義
 users ||--o{ orders : "注文"
-orders ||--|| map_info : "作業場所"
+orders ||--|| maps : "作業場所"
 orders ||--|| payments : "支払い"
 
 %% エンティティ詳細
@@ -23,15 +23,15 @@ users {
 orders {
   int id PK
   int user_id FK
-  int map_id FK
-  int payment_id FK
+  int maps_id FK
+  int payments_id FK
   date order_date
   string status
   date created_at
   date updated_at
 }
 
-map_info {
+maps{
   int id PK
   int order_id FK
   string address
@@ -46,7 +46,7 @@ map_info {
 payments {
   int id PK
   int order_id FK
-  string payment_method
+  enum category
   float amount
   date payment_date
   date created_at
