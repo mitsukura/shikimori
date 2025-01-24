@@ -54,7 +54,7 @@ payments {
   string error_message
   int refund_id
   number refund_amount
-  date refound_at
+  date refund_at
   date created_at
   date updated_at
 }
