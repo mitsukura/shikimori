@@ -44,14 +44,14 @@ maps{
 payments {
   int id PK
   int order_id FK
-  float amount
   enum category
+  enum status
   string payment_intent_id
   number authorized_amount
   string authorized_at
   number captured_amount
   string captured_at
-  date payment_date
+  string error_message
   date created_at
   date updated_at
 }
