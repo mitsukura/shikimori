@@ -52,6 +52,9 @@ payments {
   number captured_amount
   string captured_at
   string error_message
+  int refund_id
+  number refund_amount
+  date refound_at
   date created_at
   date updated_at
 }
