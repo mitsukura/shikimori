@@ -1,4 +1,4 @@
-## ER図
+## ER 図
 
 ```mermaid
 erDiagram
@@ -23,10 +23,10 @@ users {
 orders {
   int id PK
   int user_id FK
-  int maps_id FK
-  int payments_id FK
+  int map_id FK
+  int payment_id FK
   date order_date
-  string status
+  enum status
   date created_at
   date updated_at
 }
@@ -35,10 +35,8 @@ maps{
   int id PK
   int order_id FK
   string address
-  string map_name
-  string site_image
-  float latitude
-  float longitude
+  string name
+  string image
   date created_at
   date updated_at
 }
@@ -46,8 +44,13 @@ maps{
 payments {
   int id PK
   int order_id FK
-  enum category
   float amount
+  enum category
+  string payment_intent_id
+  number authorized_amount
+  string authorized_at
+  number captured_amount
+  string captured_at
   date payment_date
   date created_at
   date updated_at
