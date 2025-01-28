@@ -41,6 +41,16 @@ maps{
   date updated_at
 }
 
+refunds {
+  int id PK
+  int payment_id FK
+  number refund_amount
+  date refund_at
+  date created_at
+  date updated_at
+}
+
+
 payments {
   int id PK
   int order_id FK
@@ -51,10 +61,6 @@ payments {
   string authorized_at
   number captured_amount
   string captured_at
-  string error_message
-  int refund_id
-  number refund_amount
-  date refund_at
   date created_at
   date updated_at
 }
