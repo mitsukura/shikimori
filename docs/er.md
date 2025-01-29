@@ -7,6 +7,7 @@ erDiagram
 users ||--o{ orders : "注文"
 orders ||--|| maps : "作業場所"
 orders ||--|| payments : "支払い"
+payments ||--|| refunds : "返金"
 
 %% エンティティ詳細
 users {
@@ -43,25 +44,25 @@ maps{
 
 refunds {
   int id PK
-  int payment_id FK
-  number refund_amount
-  date refund_at
-  date created_at
-  date updated_at
+  int stripe_refund_id FK
+  number stripe_refund_amount
+  date stripe_refund_at
+  date stripe_created_at
+  date stripe_updated_at
 }
 
 
 payments {
-  int id PK
+  int stripe_id PK
   int order_id FK
-  enum category
-  enum status
-  string payment_intent_id
-  number authorized_amount
-  string authorized_at
-  number captured_amount
-  string captured_at
-  date created_at
-  date updated_at
+  enum stripe_method
+  enum stripe_status
+  string stripe_payment_intent_id
+  number stripe_authorized_amount
+  string stripe_authorized_at
+  number stripe_captured_amount
+  string stripe_captured_at
+  date stripe_created_at
+  date stripe_updated_at
 }
 ```
