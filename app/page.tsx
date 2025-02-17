@@ -1,6 +1,4 @@
-import Image from 'next/image'
 import Hero from './components/Hero'
-import Procedure from './components/Procedure'
 import Achievements from './components/Achievements'
 import Contact from './components/contact'
 
