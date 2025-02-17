@@ -9,7 +9,6 @@ export default function Home() {
     <main className='flex flex-col max-w-4xl gap-16 px-6 py-12'>
       <Hero />
       <Achievements />
-      {/* <Procedure /> */}
       <Contact />
     </main>
   )
