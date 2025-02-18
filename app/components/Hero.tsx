@@ -33,7 +33,7 @@ export default function Hero() {
               画像
             </div>
             <div className='flex flex-col justify-center gap-2'>
-              <h2 className='text-md font-bold'>重機除草(準備中)</h2>
+              <h2 className='text-md font-bold'>重機での草刈り(準備中)</h2>
               <p className='text-sm text-muted-foreground'>
                 四季守では、秋田県内の、重機での草刈りの予約ができます。
               </p>
