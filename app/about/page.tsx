@@ -1,0 +1,100 @@
+export default function About() {
+  return (
+    <>
+      <div className='p-6'>
+        <h1 className='mb-1 text-xl'>四季守とは</h1>
+        <p className='text-sm'>
+          四季守は、四季の除雪と草刈りを行うサービスです。
+        </p>
+
+        <h2 className='mb-1 mt-4 text-lg'>概要</h2>
+        <p className='text-sm'>
+          四季守は、重機によるプロフェッショナルな除雪・草刈りサービスです。個人宅から法人まで、幅広いニーズに対応し、安全・安心・快適な環境づくりに貢献します。
+        </p>
+
+        <h2 className='mb-1 mt-4 text-lg'>ブランドコンセプト</h2>
+        <p className='text-md mb-2 font-bold'>「四季を彩り、暮らしを守る」</p>
+        <p className='text-sm'>
+          四季折々の自然の美しさを守り、お客様の生活をサポートします。
+        </p>
+
+        <h2 className='mb-1 mt-4 text-lg'>サービス内容</h2>
+        <h3 className='text-sm font-bold mb-1 mt-2'>重機による除雪サービス</h3>
+        <ul className='mb-4 ml-6 list-disc text-sm'>
+          <li>
+            個人宅向け： 玄関先から駐車場までの除雪、雪かき、排雪など
+          </li>
+          <li>法人向け： 駐車場、通路、敷地内の除雪と排雪、雪堆積場の確保など</li>
+          <li>地域向け： 道路、公園、公共施設の除雪と排雪</li>
+        </ul>
+
+        <h3 className='text-sm font-bold mb-1 mt-2'>重機による草刈りサービス</h3>
+        <ul className='mb-4 ml-6 list-disc text-sm'>
+          <li>個人宅向け： 庭、空き地の草刈り、雑草処理、庭木の剪定など</li>
+          <li>法人向け： 敷地内の草刈り、雑草管理、緑地管理など</li>
+          <li>地域向け： 公園、河川敷、道路沿いの草刈り</li>
+        </ul>
+
+        <h2 className='mb-1 mt-4 text-lg'>強み</h2>
+        <ul className='mb-4 ml-6 list-disc text-sm'>
+          <li>
+            プロフェッショナル:経験豊富な専門スタッフが、安全かつ効率的に作業を行います。
+          </li>
+          <li>重機: 最新の重機を導入し、短時間で広範囲の作業が可能です。</li>
+          <li>安心: 損害保険に加入しており、万が一の事故にも対応します。</li>
+          <li>
+            柔軟性:
+            お客様のニーズに合わせて、柔軟なサービスプランをご提案します。
+          </li>
+        </ul>
+
+        <h2 className='mb-1 mt-4 text-lg'>料金体系</h2>
+        <ul className='mb-4 ml-6 list-disc text-sm'>
+          <li>個人宅向け: 定額制プラン、都度払いプラン</li>
+          <li>法人向け: 契約プラン、スポットプラン</li>
+          <li>地域向け: 協議</li>
+        </ul>
+
+        <h2 className="text-lg mb-1">マーケティング戦略</h2>
+        <ul className='mb-4 ml-6 list-disc text-sm'>
+          <li>ターゲット層: 個人宅、法人、地域</li>
+          <li>プロモーション: チラシ、DM、Web広告、SNS</li>
+          <li>
+            クロスセリング: 除雪・草刈り以外のサービスとの連携 (例:
+            庭木の剪定、害虫駆除)
+          </li>
+        </ul>
+
+        <h2 className="text-lg mb-1">運営体制</h2>
+        <ul className='mb-4 ml-6 list-disc text-sm'>
+          <li>専門スタッフ: 経験豊富なオペレーター、技術者</li>
+          <li>品質管理: 作業後の確認、定期的なメンテナンス</li>
+          <li>業務効率化: 作業計画の作成、人員配置の最適化</li>
+        </ul>
+
+        <h2 className="text-lg mb-1">将来展開</h2>
+        <ul className='mb-4 ml-6 list-disc text-sm'>
+          <li>フランチャイズ展開: 全国展開</li>
+          <li>サービス拡張: 樹木伐採、害虫駆除、庭のリフォームなど</li>
+          <li>地域展開: 地域密着型のサービス展開</li>
+        </ul>
+        
+        <h2 className="text-lg mb-1">ブランド展開による効果</h2>
+        <ul className='mb-4 ml-6 list-disc text-sm'>
+          <li>
+            多様な顧客ニーズへの対応: 個人宅、法人、地域など、幅広い顧客層に対応
+          </li>
+          <li>
+            収益機会の拡大: 除雪・草刈り以外のサービス展開による収益源の確保
+          </li>
+          <li>ブランド価値の向上: 高品質なサービス提供による信頼性向上</li>
+        </ul>
+
+        <h2 className="text-lg mb-1">最後に</h2>
+        <p className="text-sm">
+          四季守は、お客様の暮らしをより快適にするために、常にサービスの向上に努めています。重機による除雪・草刈りサービスのことなら、ぜひ四季守にお任せください。
+        </p>
+      </div>
+    </>
+  )
+}
