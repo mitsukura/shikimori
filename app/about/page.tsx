@@ -19,7 +19,7 @@ export default function About() {
         </p>
 
         <h2 className='mb-1 mt-4 text-lg'>サービス内容</h2>
-        <h3 className='text-sm font-bold mb-1 mt-2'>除雪サービス</h3>
+        <h3 className='text-sm font-bold mb-1 mt-2'>重機による除雪サービス</h3>
         <ul className='mb-4 ml-6 list-disc text-sm'>
           <li>
             個人宅向け： 玄関先から駐車場までの除雪、雪かき、排雪など
@@ -28,7 +28,7 @@ export default function About() {
           <li>地域向け： 道路、公園、公共施設の除雪と排雪</li>
         </ul>
 
-        <h3 className='text-sm font-bold mb-1 mt-2'>草刈りサービス</h3>
+        <h3 className='text-sm font-bold mb-1 mt-2'>重機による草刈りサービス</h3>
         <ul className='mb-4 ml-6 list-disc text-sm'>
           <li>個人宅向け： 庭、空き地の草刈り、雑草処理、庭木の剪定など</li>
           <li>法人向け： 敷地内の草刈り、雑草管理、緑地管理など</li>
