@@ -57,12 +57,11 @@ payments {
   int order_id FK
   enum method
   enum status
-  string intent_id
-  number authorized_amount
-  string authorizedAt
-  number captured_amount
-  string capturedAt
+  string stripe_intent_id
+  number stripe_authorized_amount
+  string stripe_authorizer_id
+  number stripe_captured_amount
+  string stripe_capturedAt
   date createdAt
   date updatedAt
 }
-```
