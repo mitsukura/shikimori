@@ -1,10 +1,17 @@
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
+
 export default function Header() {
   return (
-    <header className='container flex h-16 items-center justify-between border-b px-4'>
+    <header className='flex h-16 items-center justify-between border-b border-slate-200 px-6 dark:border-slate-700'>
       <h1 className='text-md font-bold tracking-wide'>四季守</h1>
       <nav className='flex gap-4 text-sm'>
         <ul className='flex list-none gap-4'>
-          <li>四季守とは</li>
+          <li>
+            <Button>
+              <Link href='/about'>四季守とは</Link>
+            </Button>
+          </li>
           <li>メニュー</li>
           <li>お問い合わせ</li>
           <li>登録</li>
