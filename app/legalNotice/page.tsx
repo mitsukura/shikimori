@@ -6,24 +6,24 @@ export default function Page() {
       <div className="space-y-8">
         <div className="border-b pb-4">
           <h2 className="font-semibold mb-2">事業者の名称</h2>
-          <p>株式会社シキモリ</p>
+          <p>四季守</p>
         </div>
 
         <div className="border-b pb-4">
           <h2 className="font-semibold mb-2">代表者名</h2>
-          <p>代表取締役 山田 太郎</p>
+          <p>代表 三ッ倉 利晃</p>
         </div>
 
         <div className="border-b pb-4">
           <h2 className="font-semibold mb-2">所在地</h2>
-          <p>〒100-0001</p>
-          <p>東京都千代田区千代田1-1-1</p>
+          <p>〒017-0044</p>
+          <p>秋田県大館市御成町</p>
         </div>
 
         <div className="border-b pb-4">
           <h2 className="font-semibold mb-2">お問い合わせ先</h2>
-          <p>電話番号：03-1234-5678</p>
-          <p>メールアドレス：shikimori@gmail.jp</p>
+          <p>電話番号：090-1234-5678</p>
+          <p>メールアドレス：shikimori@gmail.com</p>
           <p>受付時間：平日9:00〜18:00（土日祝日・年末年始を除く）</p>
         </div>
 
@@ -37,18 +37,17 @@ export default function Page() {
 
         <div className="border-b pb-4">
           <h2 className="font-semibold mb-2">料金</h2>
-          <p className="mb-2">除雪サービス：</p>
+          <p className="mb-2">除雪サービス・排雪サービス:</p>
           <ul className="list-disc ml-6 mb-4">
-            <li>基本料金：5,000円（税込）/ 1時間</li>
-            <li>深夜料金（22:00〜5:00）：7,500円（税込）/ 1時間</li>
+            <li>基本料金：50,000円（税込）/ 1時間</li>
             <li>最低料金：5,000円（税込）</li>
           </ul>
-          <p className="mb-2">除草サービス：</p>
+          <p className="mb-2">除草サービス・重機サービス:</p>
           <ul className="list-disc ml-6">
-            <li>基本料金：4,000円（税込）/ 1時間</li>
-            <li>最低料金：4,000円（税込）</li>
+            <li>基本料金：50,000円（税込）/ 1時間</li>
+            <li>最低料金：10,000円（税込）</li>
           </ul>
-          <p className="mt-4 text-sm">※面積や状況により料金が変動する場合がございます。</p>
+          <p className="mt-4 text-sm">※面積や状況により料金が変動する場合がごさいます。</p>
         </div>
 
         <div className="border-b pb-4">
@@ -78,8 +77,8 @@ export default function Page() {
         <div className="border-b pb-4">
           <h2 className="font-semibold mb-2">キャンセルポリシー</h2>
           <ul className="list-disc ml-6">
-            <li>前日までのキャンセル：無料</li>
-            <li>当日キャンセル：料金の50%</li>
+            <li>前日までのキャンセル：料金の80%</li>
+            <li>当日キャンセル：料金の100%</li>
             <li>作業開始後のキャンセル：料金の100%</li>
           </ul>
         </div>
@@ -93,7 +92,7 @@ export default function Page() {
         <div>
           <h2 className="font-semibold mb-2">その他の特記事項</h2>
           <ul className="list-disc ml-6">
-            <li>作業に必要な電気・水道は、お客様のものを使用させていただきます。</li>
+            <li>作業に必要な電気・水道は、作業する環境によってお客様のものを使用させていただく場合があります。</li>
             <li>特殊な作業や機材が必要な場合は、別途料金が発生する場合があります。</li>
             <li>当社が責任を負うべき事由により損害が生じた場合、実際に生じた直接の損害に限り補償いたします。</li>
           </ul>
