@@ -1,7 +1,7 @@
-export default function Contact() {
+export default function Page() {
   return (
     <div className='container mx-auto'>
-      <div className='flex flex-col items-center justify-center gap-4 p-4'>
+      <div className='flex flex-col items-center justify-center gap-4 p-4 mt-10'>
         <div className='w-full max-w-2xl min-h-[721px]'>
           <iframe
             src='https://docs.google.com/forms/d/e/1FAIpQLScowb6DWlv0-vd6dkzcpeQaPmMoIP6rq601Q4x14CHgt4TxNQ/viewform?embedded=true'
