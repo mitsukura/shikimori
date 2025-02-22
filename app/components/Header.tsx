@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { navListItems } from '@/data/navigations'
 import Link from 'next/link'
-
+import MobileNav from './mobile-nav'
 
 export default function Header() {
   return (
@@ -12,7 +12,7 @@ export default function Header() {
         </Button>
       </h1>
       <div className='flex-1'>...</div>
-      <nav>
+      <nav className='md:block hidden'>
         <ul className='flex list-none'>
           {navListItems.map(item => (
             <li key={item.href}>
@@ -23,13 +23,16 @@ export default function Header() {
           ))}
         </ul>
       </nav>
-      <div className='flex items-center'>
+      <div className='flex items-center hidden md:block'>
         <Button variant='ghost' asChild>
           <Link href='/register'>登録</Link>
         </Button>
         <Button variant='ghost' asChild>
           <Link href='/login'>ログイン</Link>
         </Button>
+      </div>
+      <div className='md:hidden'>
+        <MobileNav />
       </div>
     </header>
   )
