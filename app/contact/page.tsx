@@ -1,6 +1,7 @@
 export default function Page() {
   return (
-    <div className='container mx-auto'>
+    <div className='container mx-auto prose prose-sm p-6'> 
+      <p className="mt-10">お見積りのお問い合わせなどこちらからお問い合わせください。</p>
       <div className='flex flex-col items-center justify-center gap-4 p-4 mt-10'>
         <div className='w-full max-w-2xl min-h-[721px]'>
           <iframe
