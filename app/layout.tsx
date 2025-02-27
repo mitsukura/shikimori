@@ -4,6 +4,14 @@ import './globals.css'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import { cn } from '@/lib/utils'
+import {
+  ClerkProvider,
+  SignInButton,
+  SignUpButton,
+  SignedIn,
+  SignedOut,
+  UserButton
+} from '@clerk/nextjs'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -26,12 +34,20 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang='ja' suppressHydrationWarning>
-      <body className={cn(geistSans.variable, geistMono.variable, "antialiased min-h-dvh")}>
-        <Header />
-        {children}
-        <Footer />
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang='ja' suppressHydrationWarning>
+        <body
+          className={cn(
+            geistSans.variable,
+            geistMono.variable,
+            'min-h-dvh antialiased'
+          )}
+        >
+          <Header />
+          {children}
+          <Footer />
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }
