@@ -1,3 +1,5 @@
+'use client'
+
 import { Button } from '@/components/ui/button'
 import { navListItems } from '@/data/navigations'
 import Link from 'next/link'
