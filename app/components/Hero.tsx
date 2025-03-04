@@ -4,7 +4,7 @@ export default function Hero() {
   return (
     <>
       <div className='flex flex-col justify-center gap-4'>
-        <h2 className='text-md'>四季守メニュー</h2>
+        <h2 className='text-lg font-bold'>四季守メニュー</h2>
         <div className=''>
           <div className='group flex gap-4 rounded-xl border-2 border-green-200/30 bg-muted p-6 shadow-sm duration-500 hover:border-green-300 hover:shadow-lg'>
             <div className='flex aspect-square h-20 w-20 items-center justify-center rounded-md border-2 border-primary-foreground bg-green-200 transition-all duration-500 hover:bg-muted/50 hover:text-muted-foreground group-hover:rotate-[10deg] group-hover:scale-[110%]'>
