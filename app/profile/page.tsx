@@ -2,7 +2,7 @@
 
 import { useForm } from 'react-hook-form';
 import { useUser } from '@clerk/nextjs';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,19 +17,12 @@ type ProfileFormData = {
 
 export default function ProfilePage() {
   const { user, isLoaded } = useUser();
-  const [profile, setProfile] = useState<ProfileFormData | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // errors は現在使用されていないため、分割代入から除外
-  const { register, handleSubmit, setValue, formState } = useForm<ProfileFormData>();
+  // errors と formState は現在使用されていないため、分割代入から除外
+  const { register, handleSubmit, setValue } = useForm<ProfileFormData>();
 
-  useEffect(() => {
-    if (user) {
-      fetchProfile();
-    }
-  }, [user]);
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     if (!user) return;
     
     setLoading(true);
@@ -92,12 +85,7 @@ export default function ProfilePage() {
           return;
         }
         
-        // 空のプロフィールデータをセット
-        setProfile({
-          bio: '',
-          phone: '',
-          address: ''
-        });
+        // フォームの値をリセット
         setValue('bio', '');
         setValue('phone', '');
         setValue('address', '');
@@ -132,11 +120,6 @@ export default function ProfilePage() {
             console.error('Error creating profile:', createProfileError);
             toast.error('プロフィール情報の作成に失敗しました');
           } else {
-            setProfile({
-              bio: '',
-              phone: '',
-              address: ''
-            });
             setValue('bio', '');
             setValue('phone', '');
             setValue('address', '');
@@ -145,7 +128,6 @@ export default function ProfilePage() {
           toast.error('プロフィール情報の取得に失敗しました');
         }
       } else if (data) {
-        setProfile(data);
         setValue('bio', data.bio || '');
         setValue('phone', data.phone || '');
         setValue('address', data.address || '');
@@ -156,7 +138,13 @@ export default function ProfilePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, setValue]);
+
+  useEffect(() => {
+    if (user) {
+      fetchProfile();
+    }
+  }, [user, fetchProfile]);
 
   const onSubmit = async (data: ProfileFormData) => {
     if (!user) return;
