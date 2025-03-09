@@ -1,5 +1,4 @@
 import { Webhook } from 'svix';
-import { headers } from 'next/headers';
 import type { WebhookEvent } from '@clerk/nextjs/server';
 import { supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';

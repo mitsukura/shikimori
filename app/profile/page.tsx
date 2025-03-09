@@ -20,7 +20,8 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<ProfileFormData | null>(null);
   const [loading, setLoading] = useState(true);
   
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<ProfileFormData>();
+  // errors は現在使用されていないため、分割代入から除外
+  const { register, handleSubmit, setValue, formState } = useForm<ProfileFormData>();
 
   useEffect(() => {
     if (user) {
