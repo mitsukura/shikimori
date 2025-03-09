@@ -1,17 +1,35 @@
+'use client'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+
 export default function Contact() {
   return (
-    <div className='container mx-auto'>
-      <div className='flex flex-col items-center justify-center gap-4 p-4'>
-        <div className='w-full max-w-2xl min-h-[721px]'>
-          <iframe
-            src='https://docs.google.com/forms/d/e/1FAIpQLScowb6DWlv0-vd6dkzcpeQaPmMoIP6rq601Q4x14CHgt4TxNQ/viewform?embedded=true'
-            className='w-full h-full min-h-[721px]'
-            title='お問い合わせフォーム'
-            style={{ border: 'none' }}
-          >
-            読み込んでいます…
-          </iframe>
-        </div>
+    <div className='container mx-auto prose prose-sm'>
+      <div className='flex flex-col gap-4 p-4'>
+        <h2>お問い合わせ</h2>
+        <form
+          action='https://ssgform.com/s/uV0iqmPuFyP0'
+          method='post'
+          className='flex flex-col gap-4'
+        >
+          <label htmlFor='name' className='space-y-1'>
+            <span>お名前</span>
+            <Input type='text' name='name' id='name' required />
+          </label>
+          <label htmlFor='email' className='space-y-1'>
+            <span>メールアドレス</span>
+            <Input type='email' name='email' id='email' required />
+          </label>
+          <label htmlFor='message' className='space-y-1'>
+            <span>お問い合わせ内容</span>
+            <Textarea name='message' id='message' required />
+          </label>
+          <Button variant='default' type='submit'>
+            送信する
+          </Button>
+        </form>
       </div>
     </div>
   )

@@ -1,3 +1,5 @@
+'use client'
+
 import { Button } from '@/components/ui/button'
 import { navListItems } from '@/data/navigations'
 import Link from 'next/link'
@@ -18,7 +20,7 @@ export default function Header() {
           <Link href='/'>四季守</Link>
         </Button>
       </h1>
-      <div className='flex-1'>...</div>
+      <div className='flex-1'>.|.</div>
       <nav className='hidden md:block'>
         <ul className='flex list-none'>
           {navListItems.map(item => (
