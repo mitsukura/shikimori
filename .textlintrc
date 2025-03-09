@@ -1,0 +1,13 @@
+{
+  "rules": {
+    "preset-jtf-style": true,
+    "no-space-between-full-width": true,
+    "no-space-around-parentheses": true,
+    "no-mixed-zenkaku-and-hankaku": {
+      "space": "always",
+      "alphabet": "always",
+      "number": "always",
+      "parentheses": "always"
+    }
+  }
+}
