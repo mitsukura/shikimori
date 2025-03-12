@@ -9,20 +9,37 @@ import {
 import { navListItems } from '@/data/navigations'
 import { Menu } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function MobileNav() {
-const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
+  // クライアントサイドのみで実行
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // サーバーサイドとクライアントサイドで一貫したコンテンツ
+  const mobileMenuButton = (
+    <Button size='icon' variant='outline'>
+      <Menu size={18} />
+    </Button>
+  )
+
+  // サーバーサイドレンダリング時は最小限の構造のみを返す
+  if (!mounted) {
+    return mobileMenuButton
+  }
+
+  // クライアントサイドでのみ完全なメニューを表示
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button size='icon' variant='outline'>
-          <Menu size={18} />
-        </Button>
+        {mobileMenuButton}
       </SheetTrigger>
       <SheetContent>
-      <SheetTitle>メニュー</SheetTitle>
+        <SheetTitle>メニュー</SheetTitle>
         <ul className='flex list-none flex-col'>
           {navListItems.map(item => (
             <li key={item.href} className='my-2'>
