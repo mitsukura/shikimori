@@ -3,7 +3,7 @@
 import { useForm } from 'react-hook-form';
 import { useUser } from '@clerk/nextjs';
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
