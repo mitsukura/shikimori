@@ -8,6 +8,8 @@ users ||--o{ orders : "注文"
 orders ||--|| maps : "作業場所"
 orders ||--|| payments : "支払い"
 payments ||--|| refunds : "返金"
+orders ||--o{ order_items : "含む"
+order_items }o--|| items : "参照"
 
 %% エンティティ詳細
 users {
@@ -51,7 +53,6 @@ refunds {
   date updatedAt
 }
 
-
 payments {
   int id PK
   int order_id FK
@@ -62,6 +63,29 @@ payments {
   string stripe_authorizer_id
   number stripe_captured_amount
   string stripe_capturedAt
+  date createdAt
+  date updatedAt
+}
+
+items {
+  int id PK
+  string name
+  string description
+  number price
+  string image_url
+  enum category
+  boolean is_available
+  int stock
+  date createdAt
+  date updatedAt
+}
+
+order_items {
+  int id PK
+  int order_id FK
+  int item_id FK
+  int quantity
+  number price_at_order
   date createdAt
   date updatedAt
 }
