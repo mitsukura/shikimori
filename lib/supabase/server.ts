@@ -1,4 +1,3 @@
-import type { Database } from '@/types/database.types'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
@@ -12,7 +11,7 @@ export async function createClient() {
     throw new Error('Supabase環境変数が設定されていません')
   }
 
-  return createServerClient<Database>(
+  return createServerClient(
     supabaseUrl,
     supabaseAnonKey,
     {
