@@ -131,7 +131,7 @@ export default function ProfilePage() {
   };
 
   if (!isLoaded || loading) {
-    return <div className="container mx-auto py-8">読み込み中...</div>;
+    return <div className="container mx-auto py-8">読み込み中.....</div>;
   }
 
   if (!user) {
