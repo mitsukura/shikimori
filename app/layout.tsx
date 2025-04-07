@@ -38,6 +38,7 @@ export default function RootLayout({
             geistMono.variable,
             'min-h-dvh antialiased'
           )}
+          suppressHydrationWarning
         >
           <Header />
           {children}
