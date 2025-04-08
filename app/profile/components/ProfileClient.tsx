@@ -71,7 +71,7 @@ export default function ProfileClient({ mode }: ProfileClientProps) {
       const now = new Date().toISOString();
       
       // メールアドレスで既存ユーザーを確認
-      const { data: existingUser, error: existingError } = await supabase
+      const { data: existingUser } = await supabase
         .from('users')
         .select('id')
         .eq('email', email)
