@@ -22,6 +22,8 @@ model User {
   lastName  String   @map("last_name")
   email     String   @unique
   phone     String?
+  bio       String?  @db.Text
+  address   String?
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   
