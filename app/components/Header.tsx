@@ -20,7 +20,7 @@ export default function Header() {
           <Link href='/'>四季守</Link>
         </Button>
       </h1>
-      <div className='flex-1'>...</div>
+      <div className='flex-1' />
       <nav className='hidden md:block'>
         <ul className='flex list-none'>
           {navListItems.map(item => (
@@ -69,19 +69,11 @@ export default function Header() {
           <Button variant='ghost'>登録</Button>
         </SignUpButton>
       </SignedOut>
-      <div className='flex hidden items-center md:block'>
+      <div className='items-center hidden md:block'>
         <SignedIn>
           <UserButton />
         </SignedIn>
       </div>
-      {/* <div className='flex hidden items-center md:block'>
-        <Button variant='ghost' asChild>
-          <Link href='/register'>登録</Link>
-        </Button>
-        <Button variant='ghost' asChild>
-          <Link href='/login'>ログイン</Link>
-        </Button>
-      </div> */}
       <div className='md:hidden'>
         <MobileNav />
       </div>
