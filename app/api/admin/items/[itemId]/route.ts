@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { isAdmin } from '@/lib/authUtils';
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: { itemId: string } }
 ) {
   if (!(await isAdmin())) {
@@ -77,7 +77,7 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: Request,
+  _request: Request,
   { params }: { params: { itemId: string } }
 ) {
   if (!(await isAdmin())) {
