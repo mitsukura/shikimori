@@ -12,6 +12,7 @@ import {
   UserButton
 } from '@clerk/nextjs'
 import { useIsAdmin } from '@/lib/hooks/useIsAdmin' // 管理者判定フックをインポート
+import { ModeToggle } from '@/components/mode-toggle'
 
 export default function Header() {
   const { isAdmin, isLoading } = useIsAdmin(); // 管理者判定フックを使用
@@ -88,6 +89,9 @@ export default function Header() {
       </div>
       <div className='md:hidden'>
         <MobileNav />
+      </div>
+      <div className='ml-2'>
+        <ModeToggle />
       </div>
     </header>
   )

@@ -1,3 +1,4 @@
+import { ModeToggle } from '@/components/mode-toggle'
 import { Button } from '@/components/ui/button'
 import { footerNavListItems } from '@/data/navigations'
 import Link from 'next/link'

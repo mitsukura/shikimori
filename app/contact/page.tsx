@@ -4,7 +4,7 @@ import { Textarea } from '@/components/ui/textarea'
 
 export default function Page() {
   return (
-    <div className='container prose prose-sm mx-auto p-6'>
+    <div className='container prose prose-sm mx-auto p-6 dark:prose-invert'>
       <p className='mt-10'>
         お見積りのお問い合わせなどこちらからお問い合わせください。
       </p>

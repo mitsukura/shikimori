@@ -160,7 +160,7 @@ export default function ProfileClient({ mode }: ProfileClientProps) {
 
   if (!user) {
     return (
-      <div className="max-w-2xl mx-auto p-4 bg-white rounded-lg shadow">
+      <div className="max-w-2xl mx-auto p-4 bg-white dark:bg-slate-900 rounded-lg shadow dark:shadow-slate-800">
         <h1 className="text-2xl font-bold mb-6">プロフィール</h1>
         <p>プロフィールを表示するにはログインしてください。</p>
       </div>
@@ -180,7 +180,7 @@ export default function ProfileClient({ mode }: ProfileClientProps) {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-4 bg-white rounded-lg shadow">
+    <div className="max-w-2xl mx-auto p-4 bg-white dark:bg-slate-900 rounded-lg shadow dark:shadow-slate-800">
       <h1 className="text-2xl font-bold mb-6">プロフィール</h1>
       <p>プロフィール情報の読み込み中にエラーが発生しました。</p>
     </div>

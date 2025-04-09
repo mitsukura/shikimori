@@ -1,13 +1,12 @@
 import { cn } from '@/lib/utils'
-import {
-  ClerkProvider
-} from '@clerk/nextjs'
+import { ClerkProvider } from '@clerk/nextjs'
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
 import Footer from './components/Footer'
 import Header from './components/Header'
 import './globals.css'
+import { ThemeProvider } from '@/components/theme-provider'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -40,10 +39,17 @@ export default function RootLayout({
           )}
           suppressHydrationWarning
         >
-          <Header />
-          {children}
-          <Footer />
-          <Toaster position="top-right" />
+          <ThemeProvider
+            attribute='class'
+            defaultTheme='system'
+            enableSystem
+            disableTransitionOnChange
+          >
+            <Header />
+            {children}
+            <Footer />
+            <Toaster position='top-right' />
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>
