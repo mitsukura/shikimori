@@ -1,8 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 
 import Hero from './components/Hero'
-import Achievements from './components/Achievements'
-import Contact from './components/contact'
 
 export default async function Home() {
   let data = null
@@ -26,10 +24,10 @@ export default async function Home() {
   }
 
   return (
-    <main className='flex max-w-4xl flex-col gap-16 px-6 py-12'>
+    <main className='container mx-auto max-w-4xl flex flex-col gap-16 px-6 py-12'>
       <Hero />
-      <Achievements />
-      <Contact />
+      {/* <Achievements /> */}
+      {/* <Contact /> */}
     </main>
   )
 }

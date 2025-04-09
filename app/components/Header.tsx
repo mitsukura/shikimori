@@ -16,7 +16,7 @@ import { useIsAdmin } from '@/lib/hooks/useIsAdmin' // 管理者判定フック�
 export default function Header() {
   const { isAdmin, isLoading } = useIsAdmin(); // 管理者判定フックを使用
   return (
-    <header className='flex h-16 items-center justify-between border-b border-slate-200 px-6'>
+    <header className='flex h-16 items-center justify-between border-b px-6'>
       <h1 className='font-bold'>
         <Button variant='ghost' asChild>
           <Link href='/'>四季守</Link>
