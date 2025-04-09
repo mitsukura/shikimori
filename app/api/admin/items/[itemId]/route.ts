@@ -2,18 +2,12 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { isAdmin } from '@/lib/authUtils';
 
-interface RouteContext {
-  params: {
-    itemId: string;
-  };
-}
-
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(_request: Request, { params }: { params: { itemId: string } }) {
   if (!(await isAdmin())) {
     return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
   }
 
-  const itemId = context.params.itemId;
+  const itemId = params.itemId;
 
   try {
     const supabase = await createClient();
@@ -32,12 +26,12 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 }
 
-export async function PUT(request: Request, context: RouteContext) {
+export async function PUT(request: Request, { params }: { params: { itemId: string } }) {
   if (!(await isAdmin())) {
     return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
   }
 
-  const itemId = context.params.itemId;
+  const itemId = params.itemId;
 
   try {
     const body = await request.json();
@@ -76,12 +70,12 @@ export async function PUT(request: Request, context: RouteContext) {
   }
 }
 
-export async function DELETE(_request: Request, context: RouteContext) {
+export async function DELETE(_request: Request, { params }: { params: { itemId: string } }) {
   if (!(await isAdmin())) {
     return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
   }
 
-  const itemId = context.params.itemId;
+  const itemId = params.itemId;
 
   try {
     const supabase = await createClient();
