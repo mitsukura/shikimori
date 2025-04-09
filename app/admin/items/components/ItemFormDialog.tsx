@@ -16,7 +16,7 @@ import {
   DialogFooter,
   DialogClose
 } from '@/components/ui/dialog';
-import type { Item, ItemFormData, ItemFormProps } from '@/types/item';
+import type { ItemFormData, ItemFormProps } from '@/types/item';
 
 export default function ItemFormDialog({ 
   initialData, 
