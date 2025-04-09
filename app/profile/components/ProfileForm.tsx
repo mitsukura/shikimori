@@ -73,7 +73,7 @@ export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-4 bg-white rounded-lg shadow">
+    <div className="max-w-2xl mx-auto mt-10 p-4 bg-white dark:bg-slate-900 rounded-lg shadow dark:shadow-slate-800">
       <h1 className="text-2xl font-bold mb-6">プロフィール{initialData ? '編集' : '登録'}</h1>
       
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -82,6 +82,7 @@ export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps
             <Label htmlFor="firstName">名</Label>
             <Input
               id="firstName"
+              autoComplete='off'
               {...register('firstName', { required: '名は必須です' })}
               placeholder="名"
             />
@@ -94,6 +95,7 @@ export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps
             <Label htmlFor="lastName">姓</Label>
             <Input
               id="lastName"
+              autoComplete='off'
               {...register('lastName', { required: '姓は必須です' })}
               placeholder="姓"
             />
@@ -107,6 +109,7 @@ export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps
           <Label htmlFor="address">住所</Label>
           <Input
             id="address"
+            autoComplete='off'
             {...register('address')}
             placeholder="住所"
           />
@@ -117,6 +120,7 @@ export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps
           <Input
             id="phone"
             type="tel"
+            autoComplete='off'
             {...register('phone')}
             placeholder="電話番号"
           />
@@ -126,6 +130,7 @@ export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps
           <Label htmlFor="bio">自己紹介</Label>
           <Textarea
             id="bio"
+            autoComplete='off'
             {...register('bio')}
             placeholder="自己紹介"
             rows={4}

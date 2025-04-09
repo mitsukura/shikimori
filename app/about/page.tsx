@@ -1,7 +1,7 @@
 export default function About() {
   return (
     <>
-      <div className='p-6 prose prose-sm'>
+      <div className='container mx-auto max-w-4xl mt-10 p-6 prose prose-sm dark:prose-invert'>
         <h1>四季守とは</h1>
         <p>
           四季守は、四季の除雪と草刈りを行うサービスです。
