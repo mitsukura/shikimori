@@ -38,7 +38,29 @@ The content is organized as follows:
 app/
   about/
     page.tsx
+  admin/
+    components/
+      AdminSidebar.tsx
+    items/
+      components/
+        DeleteItemAlert.tsx
+        ItemFormDialog.tsx
+        ItemTableWrapper.tsx
+      page.tsx
+    users/
+      page.tsx
+    layout.tsx
+    page.tsx
   api/
+    admin/
+      items/
+        [itemId]/
+          route.ts
+        route.ts
+      users/
+        [userId]/
+          route.ts
+        route.ts
     webhook/
       clerk/
         route.ts
@@ -73,10 +95,13 @@ components/
   ui/
     alert-dialog.tsx
     button.tsx
+    checkbox.tsx
+    dialog.tsx
     input.tsx
     label.tsx
     sheet.tsx
     skeleton.tsx
+    table.tsx
     textarea.tsx
 data/
   achievement.ts
@@ -94,9 +119,12 @@ knowledge/
   TypeScriptLintErrors.md
   user_registration_profile.md
 lib/
+  hooks/
+    useIsAdmin.ts
   supabase/
     client.ts
     server.ts
+  authUtils.ts
   utils.ts
 prisma/
   migrations/
@@ -115,6 +143,7 @@ public/
   vercel.svg
   window.svg
 types/
+  item.ts
   profile.ts
   types.ts
 .gitignore
@@ -127,12 +156,1385 @@ next.config.ts
 package.json
 postcss.config.mjs
 README.md
-repomix-output-gemini.md
 tailwind.config.ts
 tsconfig.json
 ```
 
 # Files
+
+## File: app/admin/components/AdminSidebar.tsx
+````typescript
+'use client'; // クライアントコンポーネントとしてLinkを使用
+
+import { Button } from '@/components/ui/button';
+import { Home, Package, Users } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+const navItems = [
+  { href: '/admin', label: 'ダッシュボード', icon: Home },
+  { href: '/admin/users', label: 'ユーザー管理', icon: Users },
+  { href: '/admin/items', label: '商品管理', icon: Package },
+];
+
+export default function AdminSidebar() {
+  const pathname = usePathname();
+
+  return (
+    <aside className="w-64 border-r bg-background p-4 flex flex-col">
+      <h2 className="text-lg font-semibold mb-6">管理メニュー</h2>
+      <nav className="flex flex-col gap-2">
+        {navItems.map((item) => (
+          <Button
+            key={item.href}
+            variant={pathname === item.href ? 'secondary' : 'ghost'}
+            className="justify-start"
+            asChild
+          >
+            <Link href={item.href}>
+              <item.icon className="mr-2 h-4 w-4" />
+              {item.label}
+            </Link>
+          </Button>
+        ))}
+      </nav>
+      {/* 必要であればフッターや他の要素を追加 */}
+    </aside>
+  );
+}
+````
+
+## File: app/admin/items/components/DeleteItemAlert.tsx
+````typescript
+'use client';
+
+import { useState } from 'react';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
+type DeleteItemAlertProps = {
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  itemId: string | null;
+  itemName?: string;
+  onConfirm: () => void;
+};
+
+export default function DeleteItemAlert({
+  isOpen,
+  setIsOpen,
+  itemId,
+  itemName,
+  onConfirm,
+}: DeleteItemAlertProps) {
+  const [loading, setLoading] = useState(false);
+
+  const handleDelete = async () => {
+    if (!itemId) return;
+    
+    setLoading(true);
+    
+    try {
+      const response = await fetch(`/api/admin/items/${itemId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '商品の削除中にエラーが発生しました');
+      }
+      
+      toast.success('商品を削除しました');
+      onConfirm();
+      setIsOpen(false);
+    } catch (error: unknown) {
+      console.error('商品削除エラー:', error);
+      toast.error(error instanceof Error ? error.message : '商品の削除中にエラーが発生しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>商品を削除しますか？</AlertDialogTitle>
+          <AlertDialogDescription>
+            {itemName ? `「${itemName}」` : '選択された商品'}を削除します。この操作は元に戻せません。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>キャンセル</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleDelete}
+            disabled={loading}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            {loading ? '削除中...' : '削除する'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+````
+
+## File: app/admin/items/components/ItemFormDialog.tsx
+````typescript
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose
+} from '@/components/ui/dialog';
+import type { Item, ItemFormData, ItemFormProps } from '@/types/item';
+
+export default function ItemFormDialog({ 
+  initialData, 
+  onSuccess, 
+  isOpen, 
+  setIsOpen 
+}: ItemFormProps) {
+  const [loading, setLoading] = useState(false);
+  
+  const { 
+    register, 
+    handleSubmit, 
+    reset, 
+    setValue, 
+    formState: { errors } 
+  } = useForm<ItemFormData>({
+    defaultValues: {
+      name: '',
+      description: '',
+      price: 0,
+      imageUrl: '',
+      category: '',
+      isAvailable: true,
+      stock: 0
+    }
+  });
+
+  // 初期データが変更されたらフォームをリセット
+  useEffect(() => {
+    if (initialData) {
+      setValue('name', initialData.name);
+      setValue('description', initialData.description || '');
+      setValue('price', Number(initialData.price));
+      setValue('imageUrl', initialData.image_url || '');
+      setValue('category', initialData.category || '');
+      setValue('isAvailable', initialData.is_available);
+      setValue('stock', initialData.stock);
+    } else {
+      reset({
+        name: '',
+        description: '',
+        price: 0,
+        imageUrl: '',
+        category: '',
+        isAvailable: true,
+        stock: 0
+      });
+    }
+  }, [initialData, setValue, reset]);
+
+  const onSubmit = async (data: ItemFormData) => {
+    setLoading(true);
+    
+    try {
+      const url = initialData 
+        ? `/api/admin/items/${initialData.id}` 
+        : '/api/admin/items';
+      
+      const method = initialData ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '商品の保存中にエラーが発生しました');
+      }
+      
+      toast.success(initialData ? '商品を更新しました' : '商品を作成しました');
+      
+      if (onSuccess) {
+        onSuccess();
+      }
+      
+      setIsOpen(false);
+    } catch (error: unknown) {
+      console.error('商品保存エラー:', error);
+      toast.error(error instanceof Error ? error.message : '商品の保存中にエラーが発生しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>
+            {initialData ? '商品を編集' : '新しい商品を作成'}
+          </DialogTitle>
+        </DialogHeader>
+        
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">商品名 <span className="text-red-500">*</span></Label>
+            <Input
+              id="name"
+              {...register('name', { required: '商品名は必須です' })}
+              placeholder="商品名"
+            />
+            {errors.name && (
+              <p className="text-red-500 text-sm">{errors.name.message}</p>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="description">説明</Label>
+            <Textarea
+              id="description"
+              {...register('description')}
+              placeholder="商品の説明"
+              rows={3}
+            />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="price">価格 <span className="text-red-500">*</span></Label>
+              <Input
+                id="price"
+                type="number"
+                min="0"
+                step="1"
+                {...register('price', { 
+                  required: '価格は必須です',
+                  min: { value: 0, message: '価格は0以上である必要があります' },
+                  valueAsNumber: true
+                })}
+                placeholder="価格"
+              />
+              {errors.price && (
+                <p className="text-red-500 text-sm">{errors.price.message}</p>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="stock">在庫数</Label>
+              <Input
+                id="stock"
+                type="number"
+                min="0"
+                step="1"
+                {...register('stock', { 
+                  required: '在庫数は必須です',
+                  min: { value: 0, message: '在庫数は0以上である必要があります' },
+                  valueAsNumber: true
+                })}
+                placeholder="在庫数"
+              />
+              {errors.stock && (
+                <p className="text-red-500 text-sm">{errors.stock.message}</p>
+              )}
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="category">カテゴリ</Label>
+            <Input
+              id="category"
+              {...register('category')}
+              placeholder="カテゴリ"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="imageUrl">画像URL</Label>
+            <Input
+              id="imageUrl"
+              {...register('imageUrl')}
+              placeholder="画像URL"
+            />
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="isAvailable"
+              {...register('isAvailable')}
+            />
+            <Label htmlFor="isAvailable">販売可能</Label>
+          </div>
+          
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">キャンセル</Button>
+            </DialogClose>
+            <Button type="submit" disabled={loading}>
+              {loading ? '保存中...' : '保存'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+````
+
+## File: app/admin/items/components/ItemTableWrapper.tsx
+````typescript
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { PlusCircle, Pencil, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import ItemFormDialog from './ItemFormDialog';
+import DeleteItemAlert from './DeleteItemAlert';
+import type { Item } from '@/types/item';
+
+export default function ItemTableWrapper() {
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  
+  const fetchItems = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/admin/items');
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '商品データの取得中にエラーが発生しました');
+      }
+      
+      const data = await response.json();
+      setItems(data);
+    } catch (error: unknown) {
+      console.error('商品データ取得エラー:', error);
+      setError(error instanceof Error ? error.message : '商品データの取得中にエラーが発生しました');
+      toast.error(error instanceof Error ? error.message : '商品データの取得中にエラーが発生しました');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
+  
+  const handleAddNew = () => {
+    setSelectedItem(null);
+    setIsFormOpen(true);
+  };
+  
+  const handleEdit = (item: Item) => {
+    setSelectedItem(item);
+    setIsFormOpen(true);
+  };
+  
+  const handleDelete = (item: Item) => {
+    setSelectedItem(item);
+    setIsAlertOpen(true);
+  };
+  
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold">商品一覧</h2>
+        <Button onClick={handleAddNew}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          新規作成
+        </Button>
+      </div>
+      
+      {loading ? (
+        <div className="py-8 text-center">
+          <p className="mt-2 text-sm text-muted-foreground">商品データを読み込み中...</p>
+        </div>
+      ) : error ? (
+        <div className="py-8 text-center">
+          <p className="text-red-500">{error}</p>
+          <Button variant="outline" onClick={fetchItems} className="mt-2">
+            再読み込み
+          </Button>
+        </div>
+      ) : items.length === 0 ? (
+        <div className="py-8 text-center border rounded-lg">
+          <p className="text-muted-foreground">商品がありません。「新規作成」から商品を追加してください。</p>
+        </div>
+      ) : (
+        <div className="border rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>商品名</TableHead>
+                <TableHead>価格</TableHead>
+                <TableHead>カテゴリ</TableHead>
+                <TableHead>在庫</TableHead>
+                <TableHead>販売状態</TableHead>
+                <TableHead className="text-right">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell className="font-medium">{item.name}</TableCell>
+                  <TableCell>
+                    {typeof item.price === 'number'
+                      ? item.price.toLocaleString('ja-JP', { style: 'currency', currency: 'JPY' })
+                      : Number(item.price).toLocaleString('ja-JP', { style: 'currency', currency: 'JPY' })}
+                  </TableCell>
+                  <TableCell>{item.category || '-'}</TableCell>
+                  <TableCell>{item.stock}</TableCell>
+                  <TableCell>
+                    {item.is_available ? (
+                      <div className="flex items-center">
+                        <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
+                        <span>販売中</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center">
+                        <XCircle className="h-4 w-4 text-red-500 mr-1" />
+                        <span>停止中</span>
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(item)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                        <span className="sr-only">編集</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-red-500 hover:text-red-700"
+                        onClick={() => handleDelete(item)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">削除</span>
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+      
+      <ItemFormDialog
+        isOpen={isFormOpen}
+        setIsOpen={setIsFormOpen}
+        initialData={selectedItem}
+        onSuccess={fetchItems}
+      />
+      
+      <DeleteItemAlert
+        isOpen={isAlertOpen}
+        setIsOpen={setIsAlertOpen}
+        itemId={selectedItem?.id || null}
+        itemName={selectedItem?.name}
+        onConfirm={fetchItems}
+      />
+    </div>
+  );
+}
+````
+
+## File: app/admin/items/page.tsx
+````typescript
+import ItemTableWrapper from './components/ItemTableWrapper';
+
+export default function AdminItemsPage() {
+  return (
+    <div>
+      <h1 className="text-2xl font-bold mb-4">商品管理</h1>
+      <ItemTableWrapper />
+    </div>
+  );
+}
+````
+
+## File: app/admin/users/page.tsx
+````typescript
+export default function AdminUsersPage() {
+  return (
+    <div>
+      <h1 className="text-2xl font-bold mb-4">ユーザー管理</h1>
+      {/* ここにユーザー一覧テーブルなどを実装 */}
+      <p>ユーザー管理機能を実装します。</p>
+    </div>
+  );
+}
+````
+
+## File: app/admin/layout.tsx
+````typescript
+import { redirect } from 'next/navigation';
+import { isAdmin } from '@/lib/authUtils';
+import AdminSidebar from './components/AdminSidebar';
+
+export default async function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const isUserAdmin = await isAdmin();
+
+  if (!isUserAdmin) {
+    redirect('/'); // 管理者でなければトップページなどにリダイレクト
+  }
+
+  return (
+    <div className="flex min-h-screen">
+      <AdminSidebar />
+      <main className="flex-1 p-6 bg-muted/40">
+        {children}
+      </main>
+    </div>
+  );
+}
+````
+
+## File: app/admin/page.tsx
+````typescript
+export default function AdminDashboardPage() {
+  return (
+    <div>
+      <h1 className="text-2xl font-bold mb-4">管理者ダッシュボード</h1>
+      <p>ここに統計情報などを表示します。</p>
+      {/* 今後の拡張用 */}
+    </div>
+  );
+}
+````
+
+## File: app/api/admin/items/[itemId]/route.ts
+````typescript
+import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { isAdmin } from '@/lib/authUtils';
+
+export async function GET(
+  request: Request,
+  { params }: { params: { itemId: string } }
+) {
+  if (!(await isAdmin())) {
+    return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
+  }
+
+  const itemId = params.itemId;
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('items')
+      .select('*')
+      .eq('id', itemId)
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json(data);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : '予期せぬエラーが発生しました';
+    return new NextResponse(JSON.stringify({ error: errorMessage }), { status: 500 });
+  }
+}
+
+export async function PUT(
+  request: Request,
+  { params }: { params: { itemId: string } }
+) {
+  if (!(await isAdmin())) {
+    return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
+  }
+
+  const itemId = params.itemId;
+
+  try {
+    const body = await request.json();
+    
+    // 更新データの検証
+    if (!body || typeof body !== 'object') {
+      return new NextResponse(JSON.stringify({ error: '無効なリクエストデータ' }), { status: 400 });
+    }
+
+    // データベース用の更新オブジェクトを作成
+    const updateData = {
+      ...(body.name !== undefined && { name: body.name }),
+      ...(body.description !== undefined && { description: body.description }),
+      ...(body.price !== undefined && { price: body.price }),
+      ...(body.imageUrl !== undefined && { image_url: body.imageUrl }),
+      ...(body.category !== undefined && { category: body.category }),
+      ...(body.isAvailable !== undefined && { is_available: body.isAvailable }),
+      ...(body.stock !== undefined && { stock: body.stock }),
+      updated_at: new Date().toISOString()
+    };
+
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('items')
+      .update(updateData)
+      .eq('id', itemId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json(data);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : '予期せぬエラーが発生しました';
+    return new NextResponse(JSON.stringify({ error: errorMessage }), { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: { itemId: string } }
+) {
+  if (!(await isAdmin())) {
+    return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
+  }
+
+  const itemId = params.itemId;
+
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from('items')
+      .delete()
+      .eq('id', itemId);
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : '予期せぬエラーが発生しました';
+    return new NextResponse(JSON.stringify({ error: errorMessage }), { status: 500 });
+  }
+}
+````
+
+## File: app/api/admin/items/route.ts
+````typescript
+import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { isAdmin } from '@/lib/authUtils'; // 管理者チェック
+
+export async function GET(request: Request) {
+  if (!(await isAdmin())) {
+    return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
+  }
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('items')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return NextResponse.json(data);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : '予期せぬエラーが発生しました';
+    return new NextResponse(JSON.stringify({ error: errorMessage }), { status: 500 });
+  }
+}
+
+export async function POST(request: Request) {
+  if (!(await isAdmin())) {
+    return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
+  }
+
+  try {
+    const body = await request.json();
+    
+    // 必須フィールドの検証
+    if (!body.name || typeof body.price !== 'number' || body.price < 0) {
+      return new NextResponse(
+        JSON.stringify({ error: '商品名と有効な価格が必要です' }), 
+        { status: 400 }
+      );
+    }
+
+    // 現在の日時を取得
+    const now = new Date().toISOString();
+    
+    // データベース用のオブジェクトを作成
+    const itemData = {
+      id: crypto.randomUUID(), // UUIDを生成
+      name: body.name,
+      description: body.description || null,
+      price: body.price,
+      image_url: body.imageUrl || null,
+      category: body.category || null,
+      is_available: body.isAvailable !== undefined ? body.isAvailable : true,
+      stock: body.stock || 0,
+      created_at: now,
+      updated_at: now
+    };
+
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('items')
+      .insert(itemData)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json(data);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : '予期せぬエラーが発生しました';
+    return new NextResponse(JSON.stringify({ error: errorMessage }), { status: 500 });
+  }
+}
+````
+
+## File: app/api/admin/users/[userId]/route.ts
+````typescript
+import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { isAdmin } from '@/lib/authUtils';
+
+export async function GET(
+  request: Request,
+  { params }: { params: { userId: string } }
+) {
+  if (!(await isAdmin())) {
+    return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
+  }
+
+  const userId = params.userId;
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json(data);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : '予期せぬエラーが発生しました';
+    return new NextResponse(JSON.stringify({ error: errorMessage }), { status: 500 });
+  }
+}
+
+export async function PUT(
+  request: Request,
+  { params }: { params: { userId: string } }
+) {
+  if (!(await isAdmin())) {
+    return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
+  }
+
+  const userId = params.userId;
+
+  try {
+    const body = await request.json();
+    
+    // 更新データの検証
+    if (!body || typeof body !== 'object') {
+      return new NextResponse(JSON.stringify({ error: '無効なリクエストデータ' }), { status: 400 });
+    }
+
+    // 更新時刻を追加
+    const updateData = {
+      ...body,
+      updated_at: new Date().toISOString(),
+    };
+
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('users')
+      .update(updateData)
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json(data);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : '予期せぬエラーが発生しました';
+    return new NextResponse(JSON.stringify({ error: errorMessage }), { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: { userId: string } }
+) {
+  if (!(await isAdmin())) {
+    return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
+  }
+
+  const userId = params.userId;
+
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', userId);
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : '予期せぬエラーが発生しました';
+    return new NextResponse(JSON.stringify({ error: errorMessage }), { status: 500 });
+  }
+}
+````
+
+## File: app/api/admin/users/route.ts
+````typescript
+import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { isAdmin } from '@/lib/authUtils'; // 管理者チェック
+
+export async function GET(request: Request) {
+  if (!(await isAdmin())) {
+    return new NextResponse(JSON.stringify({ error: 'Forbidden' }), { status: 403 });
+  }
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select('*') // 必要に応じてカラムを選択
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return NextResponse.json(data);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : '予期せぬエラーが発生しました';
+    return new NextResponse(JSON.stringify({ error: errorMessage }), { status: 500 });
+  }
+}
+````
+
+## File: components/ui/checkbox.tsx
+````typescript
+"use client"
+
+import * as React from "react"
+import * as CheckboxPrimitive from "@radix-ui/react-checkbox"
+import { Check } from "lucide-react"
+
+import { cn } from "@/lib/utils"
+
+const Checkbox = React.forwardRef<
+  React.ElementRef<typeof CheckboxPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>
+>(({ className, ...props }, ref) => (
+  <CheckboxPrimitive.Root
+    ref={ref}
+    className={cn(
+      "peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground",
+      className
+    )}
+    {...props}
+  >
+    <CheckboxPrimitive.Indicator
+      className={cn("flex items-center justify-center text-current")}
+    >
+      <Check className="h-4 w-4" />
+    </CheckboxPrimitive.Indicator>
+  </CheckboxPrimitive.Root>
+))
+Checkbox.displayName = CheckboxPrimitive.Root.displayName
+
+export { Checkbox }
+````
+
+## File: components/ui/dialog.tsx
+````typescript
+"use client"
+
+import * as React from "react"
+import * as DialogPrimitive from "@radix-ui/react-dialog"
+import { X } from "lucide-react"
+
+import { cn } from "@/lib/utils"
+
+const Dialog = DialogPrimitive.Root
+
+const DialogTrigger = DialogPrimitive.Trigger
+
+const DialogPortal = DialogPrimitive.Portal
+
+const DialogClose = DialogPrimitive.Close
+
+const DialogOverlay = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Overlay>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Overlay
+    ref={ref}
+    className={cn(
+      "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      className
+    )}
+    {...props}
+  />
+))
+DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
+
+const DialogContent = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+>(({ className, children, ...props }, ref) => (
+  <DialogPortal>
+    <DialogOverlay />
+    <DialogPrimitive.Content
+      ref={ref}
+      className={cn(
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+        className
+      )}
+      {...props}
+    >
+      {children}
+      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+        <X className="h-4 w-4" />
+        <span className="sr-only">Close</span>
+      </DialogPrimitive.Close>
+    </DialogPrimitive.Content>
+  </DialogPortal>
+))
+DialogContent.displayName = DialogPrimitive.Content.displayName
+
+const DialogHeader = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn(
+      "flex flex-col space-y-1.5 text-center sm:text-left",
+      className
+    )}
+    {...props}
+  />
+)
+DialogHeader.displayName = "DialogHeader"
+
+const DialogFooter = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn(
+      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+      className
+    )}
+    {...props}
+  />
+)
+DialogFooter.displayName = "DialogFooter"
+
+const DialogTitle = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Title>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Title
+    ref={ref}
+    className={cn(
+      "text-lg font-semibold leading-none tracking-tight",
+      className
+    )}
+    {...props}
+  />
+))
+DialogTitle.displayName = DialogPrimitive.Title.displayName
+
+const DialogDescription = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Description>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Description
+    ref={ref}
+    className={cn("text-sm text-muted-foreground", className)}
+    {...props}
+  />
+))
+DialogDescription.displayName = DialogPrimitive.Description.displayName
+
+export {
+  Dialog,
+  DialogPortal,
+  DialogOverlay,
+  DialogClose,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+}
+````
+
+## File: components/ui/table.tsx
+````typescript
+import * as React from "react"
+
+import { cn } from "@/lib/utils"
+
+const Table = React.forwardRef<
+  HTMLTableElement,
+  React.HTMLAttributes<HTMLTableElement>
+>(({ className, ...props }, ref) => (
+  <div className="relative w-full overflow-auto">
+    <table
+      ref={ref}
+      className={cn("w-full caption-bottom text-sm", className)}
+      {...props}
+    />
+  </div>
+))
+Table.displayName = "Table"
+
+const TableHeader = React.forwardRef<
+  HTMLTableSectionElement,
+  React.HTMLAttributes<HTMLTableSectionElement>
+>(({ className, ...props }, ref) => (
+  <thead ref={ref} className={cn("[&_tr]:border-b", className)} {...props} />
+))
+TableHeader.displayName = "TableHeader"
+
+const TableBody = React.forwardRef<
+  HTMLTableSectionElement,
+  React.HTMLAttributes<HTMLTableSectionElement>
+>(({ className, ...props }, ref) => (
+  <tbody
+    ref={ref}
+    className={cn("[&_tr:last-child]:border-0", className)}
+    {...props}
+  />
+))
+TableBody.displayName = "TableBody"
+
+const TableFooter = React.forwardRef<
+  HTMLTableSectionElement,
+  React.HTMLAttributes<HTMLTableSectionElement>
+>(({ className, ...props }, ref) => (
+  <tfoot
+    ref={ref}
+    className={cn(
+      "border-t bg-muted/50 font-medium [&>tr]:last:border-b-0",
+      className
+    )}
+    {...props}
+  />
+))
+TableFooter.displayName = "TableFooter"
+
+const TableRow = React.forwardRef<
+  HTMLTableRowElement,
+  React.HTMLAttributes<HTMLTableRowElement>
+>(({ className, ...props }, ref) => (
+  <tr
+    ref={ref}
+    className={cn(
+      "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+      className
+    )}
+    {...props}
+  />
+))
+TableRow.displayName = "TableRow"
+
+const TableHead = React.forwardRef<
+  HTMLTableCellElement,
+  React.ThHTMLAttributes<HTMLTableCellElement>
+>(({ className, ...props }, ref) => (
+  <th
+    ref={ref}
+    className={cn(
+      "h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0",
+      className
+    )}
+    {...props}
+  />
+))
+TableHead.displayName = "TableHead"
+
+const TableCell = React.forwardRef<
+  HTMLTableCellElement,
+  React.TdHTMLAttributes<HTMLTableCellElement>
+>(({ className, ...props }, ref) => (
+  <td
+    ref={ref}
+    className={cn("p-4 align-middle [&:has([role=checkbox])]:pr-0", className)}
+    {...props}
+  />
+))
+TableCell.displayName = "TableCell"
+
+const TableCaption = React.forwardRef<
+  HTMLTableCaptionElement,
+  React.HTMLAttributes<HTMLTableCaptionElement>
+>(({ className, ...props }, ref) => (
+  <caption
+    ref={ref}
+    className={cn("mt-4 text-sm text-muted-foreground", className)}
+    {...props}
+  />
+))
+TableCaption.displayName = "TableCaption"
+
+export {
+  Table,
+  TableHeader,
+  TableBody,
+  TableFooter,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableCaption,
+}
+````
+
+## File: lib/hooks/useIsAdmin.ts
+````typescript
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { useUser } from '@clerk/nextjs';
+import { supabase } from '@/lib/supabase/client';
+
+export function useIsAdmin() {
+  const { user, isLoaded } = useUser();
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  const checkAdminStatus = useCallback(async () => {
+    if (!isLoaded || !user) {
+      // Clerkのユーザー情報が読み込み中または存在しない場合
+      setIsLoading(!isLoaded); // isLoadedがfalseの間はローディング中
+      if (isLoaded && !user) { // 読み込み完了したがユーザーなし
+        setIsAdmin(false);
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // Clerkユーザー情報はあるが、管理者ステータスをこれから取得
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('is_admin')
+        .eq('clerk_id', user.id)
+        .single();
+
+      if (error) {
+        // Supabaseにユーザーが見つからない、または他のエラー
+        console.warn('Admin status check failed:', error.message);
+        setIsAdmin(false);
+      } else {
+        setIsAdmin(data?.is_admin === true);
+      }
+    } catch (err) {
+      console.error('Unexpected error fetching admin status:', err);
+      setIsAdmin(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, isLoaded]);
+
+  useEffect(() => {
+    checkAdminStatus();
+  }, [checkAdminStatus]); // useCallbackでメモ化された関数を依存配列に入れる
+
+  return { isAdmin, isLoading };
+}
+````
+
+## File: lib/authUtils.ts
+````typescript
+import { auth } from '@clerk/nextjs/server';
+import { createClient } from '@/lib/supabase/server'; // サーバーサイド用Supabaseクライアント
+
+export async function isAdmin(): Promise<boolean> {
+  const { userId } = await auth();
+  if (!userId) {
+    return false; // 未認証ユーザーは管理者ではない
+  }
+
+  try {
+    const supabase = await createClient();
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('is_admin')
+      .eq('clerk_id', userId) // clerk_idで検索
+      .single();
+
+    if (error || !user) {
+      console.error('Error fetching user admin status:', error?.message);
+      return false;
+    }
+
+    return user.is_admin === true;
+  } catch (err) {
+    console.error('Unexpected error in isAdmin:', err);
+    return false;
+  }
+}
+````
+
+## File: types/item.ts
+````typescript
+import type { Decimal } from '@prisma/client/runtime/library';
+
+// Supabaseから取得する商品データの型
+export type Item = {
+  id: string; // uuid
+  name: string;
+  description?: string | null;
+  price: number | Decimal;
+  image_url?: string | null;
+  category?: string | null;
+  is_available: boolean;
+  stock: number;
+  created_at: string; // ISO 8601 string
+  updated_at: string; // ISO 8601 string
+};
+
+// 商品フォームで使用するデータの型
+export type ItemFormData = {
+  name: string;
+  description?: string;
+  price: number;
+  imageUrl?: string;
+  category?: string;
+  isAvailable: boolean;
+  stock: number;
+};
+
+// 商品フォームのプロパティ型
+export type ItemFormProps = {
+  initialData?: Item | null;
+  onSuccess?: () => void;
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+};
+````
+
+## File: app/components/Procedure.tsx
+````typescript
+export default function Procedure() {
+  return (
+    <div className='flex flex-col gap-4'>
+      <h2 className='text-2xl font-bold mb-2'>雪かき、草刈りサービスの利用方法</h2>
+      <ol className='list-decimal list-inside space-y-4'>
+        <li>
+          <span className='font-bold'>サービスを選ぶ</span>
+          <p className='ml-6 mt-1'>まず、雪かき（冬期間）か草刈り（夏期間）のどちらをお願いしたいか選びます。</p>
+        </li>
+        <li>
+          <span className='font-bold'>ユーザー登録</span>
+          <p className='ml-6 mt-1'>サービスを選んだら、初めのみお名前や住所、作業場所などを登録します。これは、あなたのお家や連絡先を教えてもらうためです。</p>
+        </li>
+        <li>
+          <span className='font-bold'>注文と支払い</span>
+          <p className='ml-6 mt-1'>住所の登録が終わったら、雪かきや草刈りをしてほしい日時を選びます。日時が決まったら、料金を支払います。現在は。クレジットカードのみです。</p>
+        </li>
+        <li>
+          <span className='font-bold'>サービス当日</span>
+          <p className='ml-6 mt-1'>予約した日時に、専門の業者があなたの家に来て、雪かきや草刈りをしてくれます。</p>
+        </li>
+        <li>
+          <span className='font-bold'>完了</span>
+          <p className='ml-6 mt-1'>作業が終わったら、確認をして完了となります。</p>
+        </li>
+      </ol>
+      <h2 className='text-2xl font-bold mb-2'>ポイント</h2>
+      <ul className='list-disc list-inside space-y-4'>
+        <li>登録や注文は、スマホやパソコンから簡単にできます。</li>
+        <li>わからないことがあれば、いつでも質問できます。</li>
+      </ul>
+      <h2 className='text-2xl font-bold mb-2'>注意事項</h2>
+      <ul className='list-disc list-inside space-y-4'>
+        <li>雪かきや草刈りの料金は、予約日によって変わる場合があります。</li>
+        <li>予約が込み合っている場合は、希望の日時に予約できないことがあります。</li>
+      </ul>
+    </div>
+  )
+}
+````
+
+## File: app/menu/page.tsx
+````typescript
+import Hero from "../components/Hero";
+
+export default function Page() {
+  return (
+    <div className="mt-12">
+    <Hero />
+    </div>
+  )
+}
+````
 
 ## File: app/profile/components/ProfileClient.tsx
 ````typescript
@@ -209,7 +1611,7 @@ export default function ProfileClient({ mode }: ProfileClientProps) {
       const now = new Date().toISOString();
       
       // メールアドレスで既存ユーザーを確認
-      const { data: existingUser, error: existingError } = await supabase
+      const { data: existingUser } = await supabase
         .from('users')
         .select('id')
         .eq('email', email)
@@ -759,525 +2161,6 @@ export {
 }
 ````
 
-## File: components/ui/label.tsx
-````typescript
-"use client"
-
-import * as React from "react"
-import * as LabelPrimitive from "@radix-ui/react-label"
-import { cva, type VariantProps } from "class-variance-authority"
-
-import { cn } from "@/lib/utils"
-
-const labelVariants = cva(
-  "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-)
-
-const Label = React.forwardRef<
-  React.ElementRef<typeof LabelPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> &
-    VariantProps<typeof labelVariants>
->(({ className, ...props }, ref) => (
-  <LabelPrimitive.Root
-    ref={ref}
-    className={cn(labelVariants(), className)}
-    {...props}
-  />
-))
-Label.displayName = LabelPrimitive.Root.displayName
-
-export { Label }
-````
-
-## File: components/ui/skeleton.tsx
-````typescript
-import { cn } from "@/lib/utils"
-
-function Skeleton({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn("animate-pulse rounded-md bg-muted", className)}
-      {...props}
-    />
-  )
-}
-
-export { Skeleton }
-````
-
-## File: prisma/migrations/20250407151755_add_bio_and_address_fields/migration.sql
-````sql
--- AlterTable
-ALTER TABLE "users" ADD COLUMN     "address" TEXT,
-ADD COLUMN     "bio" TEXT;
-````
-
-## File: types/profile.ts
-````typescript
-export type ProfileClientProps = {
-  mode: 'view' | 'edit' | 'create';
-};
-
-export type ProfileViewProps = {
-  userData: {
-    first_name: string;
-    last_name: string;
-    email: string;
-    phone: string;
-    bio?: string;
-    address?: string;
-  };
-};
-
-// データベースのユーザー型
-export type UserRecord = {
-  id: string;
-  clerk_id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  phone: string;
-  bio?: string;
-  address?: string;
-  created_at: string;
-  updated_at: string;
-};
-
-// コンポーネントのProps型
-export type ProfileFormProps = {
-  initialData?: Partial<UserRecord>;
-  onSuccess?: () => void;
-};
-
-// フォーム入力用の型定義
-export type ProfileFormData = {
-  firstName: string;
-  lastName: string;
-  phone: string;
-  bio: string;
-  address: string;
-};
-````
-
-## File: repomix-output-gemini.md
-````markdown
-了解しました。管理者用ダッシュボード（ユーザー管理・商品管理）を実装するための手順書を、コーディングエージェント向けに作成します。
-
-管理者用ダッシュボード 実装手順書
-1. 目的
-
-既存のNext.jsアプリケーション（四季守）に、以下の機能を持つ管理者用ダッシュボードを追加します。
-
-ユーザー管理: 登録ユーザーの一覧表示、詳細確認、権限（管理者フラグ）変更、削除
-
-商品管理: 登録商品の一覧表示、新規作成、編集、削除
-
-2. 前提条件
-
-フレームワーク: Next.js 15 (App Router)
-
-認証: Clerk
-
-データベース: Supabase (PostgreSQL)
-
-ORM/クライアント: @supabase/supabase-js (Prismaは定義のみで使用、データ操作はSupabase Client経由)
-
-UIライブラリ: shadcn/ui (既存コンポーネントを活用)
-
-スタイリング: Tailwind CSS
-
-言語: TypeScript
-
-3. 実装ステップ
-ステップ 1: 管理者権限の判定ロジック実装
-
-Supabase users テーブル確認:
-
-users テーブルに is_admin (Boolean型、デフォルトfalse) カラムが存在することを確認します。(既存の prisma/schema.prisma に基づく)
-
-必要に応じて、特定のユーザーを手動で管理者 (is_admin = true) に設定しておきます（Supabase Studio等で）。
-
-Clerk Webhook の確認/修正 (任意):
-
-app/api/webhook/clerk/route.ts で user.created イベント時に、デフォルトで is_admin = false でユーザーが作成されることを確認します。
-
-将来的にClerk側で管理者ロールを管理する場合は、WebhookでClerkのメタデータやロール情報を読み取り、Supabaseの is_admin に同期するロジックを追加します。（今回は手動設定を前提）
-
-管理者判定ヘルパー関数の作成:
-
-サーバーサイドで現在のユーザーが管理者かどうかを判定する関数を作成します。
-
-ファイル: lib/authUtils.ts (新規作成)
-
-// lib/authUtils.ts
-import { auth } from '@clerk/nextjs/server';
-import { createClient } from '@/lib/supabase/server'; // サーバーサイド用Supabaseクライアント
-
-export async function isAdmin(): Promise<boolean> {
-  const { userId } = auth();
-  if (!userId) {
-    return false; // 未認証ユーザーは管理者ではない
-  }
-
-  try {
-    const supabase = await createClient();
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('is_admin')
-      .eq('clerk_id', userId) // clerk_idで検索
-      .single();
-
-    if (error || !user) {
-      console.error('Error fetching user admin status:', error?.message);
-      return false;
-    }
-
-    return user.is_admin === true;
-  } catch (err) {
-    console.error('Unexpected error in isAdmin:', err);
-    return false;
-  }
-}
-
-ステップ 2: 管理者用UIレイアウトとルーティング
-
-管理者用ディレクトリ作成:
-
-app/admin ディレクトリを作成します。
-
-管理者用レイアウト作成:
-
-ファイル: app/admin/layout.tsx (新規作成)
-
-このレイアウトで管理者権限をチェックし、非管理者からのアクセスを制限します。
-
-サイドバーナビゲーションを含みます。
-
-// app/admin/layout.tsx
-import { redirect } from 'next/navigation';
-import { isAdmin } from '@/lib/authUtils';
-import AdminSidebar from './components/AdminSidebar'; // 後で作成
-
-export default async function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const isUserAdmin = await isAdmin();
-
-  if (!isUserAdmin) {
-    redirect('/'); // 管理者でなければトップページなどにリダイレクト
-  }
-
-  return (
-    <div className="flex min-h-screen">
-      <AdminSidebar />
-      <main className="flex-1 p-6 bg-muted/40">
-        {children}
-      </main>
-    </div>
-  );
-}
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-TypeScript
-IGNORE_WHEN_COPYING_END
-
-サイドバーコンポーネント作成:
-
-ファイル: app/admin/components/AdminSidebar.tsx (新規作成)
-
-// app/admin/components/AdminSidebar.tsx
-'use client'; // クライアントコンポーネントとしてLinkを使用
-
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Home, Users, Package } from 'lucide-react';
-import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
-
-const navItems = [
-  { href: '/admin', label: 'ダッシュボード', icon: Home },
-  { href: '/admin/users', label: 'ユーザー管理', icon: Users },
-  { href: '/admin/items', label: '商品管理', icon: Package },
-];
-
-export default function AdminSidebar() {
-  const pathname = usePathname();
-
-  return (
-    <aside className="w-64 border-r bg-background p-4 flex flex-col">
-      <h2 className="text-lg font-semibold mb-6">管理メニュー</h2>
-      <nav className="flex flex-col gap-2">
-        {navItems.map((item) => (
-          <Button
-            key={item.href}
-            variant={pathname === item.href ? 'secondary' : 'ghost'}
-            className="justify-start"
-            asChild
-          >
-            <Link href={item.href}>
-              <item.icon className="mr-2 h-4 w-4" />
-              {item.label}
-            </Link>
-          </Button>
-        ))}
-      </nav>
-       {/* 必要であればフッターや他の要素を追加 */}
-    </aside>
-  );
-}
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-TypeScript
-IGNORE_WHEN_COPYING_END
-
-管理者用ダッシュボードページ作成:
-
-ファイル: app/admin/page.tsx (新規作成)
-
-// app/admin/page.tsx
-export default function AdminDashboardPage() {
-  return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">管理者ダッシュボード</h1>
-      <p>ここに統計情報などを表示します。</p>
-      {/* 今後の拡張用 */}
-    </div>
-  );
-}
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-TypeScript
-IGNORE_WHEN_COPYING_END
-
-ユーザー管理・商品管理ページのプレースホルダ作成:
-
-app/admin/users/page.tsx
-
-app/admin/items/page.tsx
-
-// app/admin/users/page.tsx (同様に items も作成)
-export default function AdminUsersPage() {
-  return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">ユーザー管理</h1>
-      {/* ここにユーザー一覧テーブルなどを実装 */}
-      <p>ユーザー管理機能を実装します。</p>
-    </div>
-  );
-}
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-TypeScript
-IGNORE_WHEN_COPYING_END
-ステップ 3: APIエンドポイントの作成 (Supabase連携)
-
-注意: APIエンドポイント内でも必ず管理者権限をチェックしてください。
-
-ユーザー管理API:
-
-app/api/admin/users/route.ts (GET: ユーザー一覧取得)
-
-app/api/admin/users/[userId]/route.ts (PUT: ユーザー更新 - is_admin等, DELETE: ユーザー削除)
-
-// 例: app/api/admin/users/route.ts (GET)
-import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { isAdmin } from '@/lib/authUtils'; // 管理者チェック
-
-export async function GET(request: Request) {
-  if (!(await isAdmin())) {
-    return new NextResponse(JSON.stringify({ error: 'Forbidden' }), { status: 403 });
-  }
-
-  try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from('users')
-      .select('*') // 必要に応じてカラムを選択
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    return NextResponse.json(data);
-  } catch (error: any) {
-    return new NextResponse(JSON.stringify({ error: error.message }), { status: 500 });
-  }
-}
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-TypeScript
-IGNORE_WHEN_COPYING_END
-
-PUT, DELETE も同様に isAdmin() チェックとSupabase Clientを使った操作を実装します。[userId] はSupabaseの id (UUID) を想定しますが、clerk_id を使う場合はパスパラメータやリクエストボディで受け取るように調整してください。
-
-商品管理API:
-
-app/api/admin/items/route.ts (GET: 商品一覧取得, POST: 商品新規作成)
-
-app/api/admin/items/[itemId]/route.ts (PUT: 商品更新, DELETE: 商品削除)
-
-実装方法はユーザー管理APIと同様です。isAdmin() チェックを忘れずに行います。
-
-ステップ 4: ユーザー管理画面の実装
-
-ユーザー一覧テーブルコンポーネント作成:
-
-ファイル: app/admin/users/components/UserTable.tsx (新規作成)
-
-'use client' を指定し、useEffect でAPI (/api/admin/users) からデータをフェッチします。
-
-shadcn/uiの Table コンポーネントを使用してユーザー情報を表示します。
-
-各行に「編集」「削除」ボタンを配置します。
-
-ユーザー編集モーダル作成:
-
-ファイル: app/admin/users/components/EditUserDialog.tsx (新規作成)
-
-shadcn/uiの Dialog を使用します。
-
-フォーム (React Hook Form + shadcn/ui Input, Checkbox for is_admin など) を作成します。
-
-Submit時にPUT API (/api/admin/users/[userId]) を呼び出して更新します。
-
-ユーザー削除確認ダイアログ作成:
-
-ファイル: app/admin/users/components/DeleteUserAlert.tsx (新規作成)
-
-shadcn/uiの AlertDialog を使用します。
-
-削除実行時にDELETE API (/api/admin/users/[userId]) を呼び出します。
-
-ユーザー管理ページ本体の実装:
-
-ファイル: app/admin/users/page.tsx (修正)
-
-UserTable コンポーネントを呼び出し、編集・削除ボタンのクリックイベントで対応するモーダル/アラートダイアログを開くロジックを実装します。
-
-データ更新後の再フェッチロジック（例: SWRやReact Queryのキャッシュ無効化、または手動再フェッチ）を実装します。
-
-ステップ 5: 商品管理画面の実装
-
-商品一覧テーブルコンポーネント作成:
-
-ファイル: app/admin/items/components/ItemTable.tsx (新規作成)
-
-ユーザー管理と同様にAPIからデータをフェッチし、Table で表示。「新規作成」「編集」「削除」ボタンを配置します。
-
-商品作成/編集フォームモーダル作成:
-
-ファイル: app/admin/items/components/EditItemDialog.tsx (新規作成)
-
-新規作成と編集で共用できるフォームコンポーネントを作成します。
-
-shadcn/uiの Dialog, Input, Textarea, Checkbox (is_available), Input type="number" (price, stock) などを使用します。
-
-Submit時にPOST (/api/admin/items) またはPUT (/api/admin/items/[itemId]) APIを呼び出します。
-
-商品削除確認ダイアログ作成:
-
-ファイル: app/admin/items/components/DeleteItemAlert.tsx (新規作成)
-
-ユーザー管理と同様に AlertDialog を使用し、DELETE API (/api/admin/items/[itemId]) を呼び出します。
-
-商品管理ページ本体の実装:
-
-ファイル: app/admin/items/page.tsx (修正)
-
-ItemTable と 新規作成ボタンを配置。テーブル内のボタンクリックで編集モーダルや削除アラートを開くロジックを実装。
-
-データ更新後の再フェッチロジックを実装します。
-
-ステップ 6: 状態管理とエラーハンドリング
-
-各クライアントコンポーネント (UserTable, ItemTable など) で useState を使用してローディング状態やエラー状態を管理し、ユーザーにフィードバックを表示します。
-
-API呼び出し部分では try...catch を使用してエラーを捕捉し、sonner (既存) を使ってエラーメッセージを表示します。
-
-データ量が多い場合やリアルタイム更新が必要な場合は、SWRやReact Queryのようなデータフェッチングライブラリの導入を検討してください。現状は fetch と useState/useEffect で実装可能です。
-
-ステップ 7: テスト
-
-管理者アカウントと一般ユーザーアカウントでログインし、管理者ページへのアクセス制御が正しく機能することを確認します。
-
-ユーザー管理、商品管理の各CRUD操作（作成、読み取り、更新、削除）が意図通りに動作することを確認します。
-
-境界値や不正な入力に対するテストも行います。
-
-この手順書に従って実装を進めてください。各コンポーネントやAPIエンドポイントの具体的なコードは、shadcn/uiのドキュメントや既存のコードを参考にしながら作成してください。不明点があれば再度質問してください。
-````
-
-## File: app/components/Procedure.tsx
-````typescript
-export default function Procedure() {
-  return (
-    <div className='flex flex-col gap-4'>
-      <h2 className='text-2xl font-bold mb-2'>雪かき、草刈りサービスの利用方法</h2>
-      <ol className='list-decimal list-inside space-y-4'>
-        <li>
-          <span className='font-bold'>サービスを選ぶ</span>
-          <p className='ml-6 mt-1'>まず、雪かき（冬期間）か草刈り（夏期間）のどちらをお願いしたいか選びます。</p>
-        </li>
-        <li>
-          <span className='font-bold'>ユーザー登録</span>
-          <p className='ml-6 mt-1'>サービスを選んだら、初めのみお名前や住所、作業場所などを登録します。これは、あなたのお家や連絡先を教えてもらうためです。</p>
-        </li>
-        <li>
-          <span className='font-bold'>注文と支払い</span>
-          <p className='ml-6 mt-1'>住所の登録が終わったら、雪かきや草刈りをしてほしい日時を選びます。日時が決まったら、料金を支払います。現在は。クレジットカードのみです。</p>
-        </li>
-        <li>
-          <span className='font-bold'>サービス当日</span>
-          <p className='ml-6 mt-1'>予約した日時に、専門の業者があなたの家に来て、雪かきや草刈りをしてくれます。</p>
-        </li>
-        <li>
-          <span className='font-bold'>完了</span>
-          <p className='ml-6 mt-1'>作業が終わったら、確認をして完了となります。</p>
-        </li>
-      </ol>
-      <h2 className='text-2xl font-bold mb-2'>ポイント</h2>
-      <ul className='list-disc list-inside space-y-4'>
-        <li>登録や注文は、スマホやパソコンから簡単にできます。</li>
-        <li>わからないことがあれば、いつでも質問できます。</li>
-      </ul>
-      <h2 className='text-2xl font-bold mb-2'>注意事項</h2>
-      <ul className='list-disc list-inside space-y-4'>
-        <li>雪かきや草刈りの料金は、予約日によって変わる場合があります。</li>
-        <li>予約が込み合っている場合は、希望の日時に予約できないことがあります。</li>
-      </ul>
-    </div>
-  )
-}
-````
-
-## File: app/menu/page.tsx
-````typescript
-import Hero from "../components/Hero";
-
-export default function Page() {
-  return (
-    <div className="mt-12">
-    <Hero />
-    </div>
-  )
-}
-````
-
 ## File: components/ui/button.tsx
 ````typescript
 import * as React from "react"
@@ -1362,6 +2245,36 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
 Input.displayName = "Input"
 
 export { Input }
+````
+
+## File: components/ui/label.tsx
+````typescript
+"use client"
+
+import * as React from "react"
+import * as LabelPrimitive from "@radix-ui/react-label"
+import { cva, type VariantProps } from "class-variance-authority"
+
+import { cn } from "@/lib/utils"
+
+const labelVariants = cva(
+  "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+)
+
+const Label = React.forwardRef<
+  React.ElementRef<typeof LabelPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> &
+    VariantProps<typeof labelVariants>
+>(({ className, ...props }, ref) => (
+  <LabelPrimitive.Root
+    ref={ref}
+    className={cn(labelVariants(), className)}
+    {...props}
+  />
+))
+Label.displayName = LabelPrimitive.Root.displayName
+
+export { Label }
 ````
 
 ## File: components/ui/sheet.tsx
@@ -1506,6 +2419,25 @@ export {
   SheetTitle,
   SheetDescription,
 }
+````
+
+## File: components/ui/skeleton.tsx
+````typescript
+import { cn } from "@/lib/utils"
+
+function Skeleton({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn("animate-pulse rounded-md bg-muted", className)}
+      {...props}
+    />
+  )
+}
+
+export { Skeleton }
 ````
 
 ## File: components/ui/textarea.tsx
@@ -2751,6 +3683,13 @@ ALTER TABLE "users" ADD COLUMN     "clerk_id" TEXT;
 CREATE UNIQUE INDEX "users_clerk_id_key" ON "users"("clerk_id");
 ````
 
+## File: prisma/migrations/20250407151755_add_bio_and_address_fields/migration.sql
+````sql
+-- AlterTable
+ALTER TABLE "users" ADD COLUMN     "address" TEXT,
+ADD COLUMN     "bio" TEXT;
+````
+
 ## File: prisma/migrations/migration_lock.toml
 ````toml
 # Please do not edit this file manually
@@ -2927,6 +3866,53 @@ model Refund {
 <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M1.5 2.5h13v10a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1zM0 1h16v11.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 12.5zm3.75 4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M7 4.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m1.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5" fill="#666"/></svg>
 ````
 
+## File: types/profile.ts
+````typescript
+export type ProfileClientProps = {
+  mode: 'view' | 'edit' | 'create';
+};
+
+export type ProfileViewProps = {
+  userData: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
+    bio?: string;
+    address?: string;
+  };
+};
+
+// データベースのユーザー型
+export type UserRecord = {
+  id: string;
+  clerk_id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  bio?: string;
+  address?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// コンポーネントのProps型
+export type ProfileFormProps = {
+  initialData?: Partial<UserRecord>;
+  onSuccess?: () => void;
+};
+
+// フォーム入力用の型定義
+export type ProfileFormData = {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  bio: string;
+  address: string;
+};
+````
+
 ## File: types/types.ts
 ````typescript
 export type Achievement = {
@@ -2993,26 +3979,6 @@ export type Achievement = {
   },
   "iconLibrary": "lucide"
 }
-````
-
-## File: eslint.config.mjs
-````
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
-const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
-];
-
-export default eslintConfig;
 ````
 
 ## File: middleware.ts
@@ -3390,10 +4356,13 @@ import { navListItems } from '@/data/navigations'
 import { Menu } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { SignedIn } from '@clerk/nextjs'
+import { useIsAdmin } from '@/lib/hooks/useIsAdmin'
 
 export default function MobileNav() {
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const { isAdmin, isLoading } = useIsAdmin()
 
   // クライアントサイドのみで実行
   useEffect(() => {
@@ -3428,6 +4397,16 @@ export default function MobileNav() {
               </Button>
             </li>
           ))}
+          {/* 管理者リンクの条件付き表示 */}
+          <SignedIn>
+            {mounted && !isLoading && isAdmin && (
+              <li className='my-2'>
+                <Button variant='ghost' asChild onClick={() => setOpen(false)}>
+                  <Link href='/admin'>管理</Link>
+                </Button>
+              </li>
+            )}
+          </SignedIn>
         </ul>
         <div className='grid grid-cols-2 gap-2 sticky top-full'>
           <Button variant='ghost' asChild onClick={() => setOpen(false)}>
@@ -3766,6 +4745,34 @@ order_items {
 }
 ````
 
+## File: eslint.config.mjs
+````
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { FlatCompat } from "@eslint/eslintrc";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const compat = new FlatCompat({
+  baseDirectory: __dirname,
+});
+
+const eslintConfig = [
+  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['warn', { 
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+      }],
+    },
+  }
+];
+
+export default eslintConfig;
+````
+
 ## File: app/components/contact.tsx
 ````typescript
 'use client'
@@ -3929,17 +4936,6 @@ export default function Page() {
 }
 ````
 
-## File: app/profile/page.tsx
-````typescript
-'use client';
-
-import ProfileClient from './components/ProfileClient';
-
-export default function ProfilePage() {
-  return <ProfileClient mode="view" />;
-}
-````
-
 ## File: app/globals.css
 ````css
 @tailwind base;
@@ -4086,6 +5082,17 @@ export default {
   },
   plugins: [require('tailwindcss-animate'), require("@tailwindcss/typography")],
 } satisfies Config
+````
+
+## File: app/profile/page.tsx
+````typescript
+'use client';
+
+import ProfileClient from './components/ProfileClient';
+
+export default function ProfilePage() {
+  return <ProfileClient mode="view" />;
+}
 ````
 
 ## File: app/page.tsx
@@ -4275,8 +5282,10 @@ import {
   SignUpButton,
   UserButton
 } from '@clerk/nextjs'
+import { useIsAdmin } from '@/lib/hooks/useIsAdmin' // 管理者判定フックをインポート
 
 export default function Header() {
+  const { isAdmin, isLoading } = useIsAdmin(); // 管理者判定フックを使用
   return (
     <header className='flex h-16 items-center justify-between border-b border-slate-200 px-6'>
       <h1 className='font-bold'>
@@ -4286,7 +5295,7 @@ export default function Header() {
       </h1>
       <div className='flex-1' />
       <nav className='hidden md:block'>
-        <ul className='flex list-none'>
+        <ul className='flex list-none items-center'>
           {navListItems.map(item => (
             <li key={item.href}>
               <Button variant='ghost' asChild>
@@ -4294,6 +5303,16 @@ export default function Header() {
               </Button>
             </li>
           ))}
+          {/* 管理者リンクの条件付き表示 */}
+          <SignedIn>
+            {!isLoading && isAdmin && (
+              <li>
+                <Button variant='ghost' asChild>
+                  <Link href='/admin'>管理</Link>
+                </Button>
+              </li>
+            )}
+          </SignedIn>
         </ul>
       </nav>
       <SignedIn>
@@ -4362,6 +5381,7 @@ export default function Header() {
     "@clerk/nextjs": "^6.12.1",
     "@prisma/client": "6.5.0",
     "@radix-ui/react-alert-dialog": "^1.1.6",
+    "@radix-ui/react-checkbox": "^1.1.4",
     "@radix-ui/react-dialog": "^1.1.6",
     "@radix-ui/react-label": "^2.1.2",
     "@radix-ui/react-slot": "^1.1.2",
@@ -4369,9 +5389,12 @@ export default function Header() {
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.1",
     "@tailwindcss/typography": "^0.5.16",
+    "add": "^2.0.6",
     "button": "^1.1.1",
+    "checkbox": "^0.0.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dialog": "^0.3.1",
     "lucide-react": "^0.475.0",
     "next": "15.1.4",
     "prettier": "^3.5.0",
@@ -4379,6 +5402,7 @@ export default function Header() {
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.54.2",
+    "shadcn-ui": "^0.9.5",
     "sonner": "^2.0.1",
     "svix": "^1.60.1",
     "tailwind-merge": "^3.0.1",

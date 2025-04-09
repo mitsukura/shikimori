@@ -11,8 +11,10 @@ import {
   SignUpButton,
   UserButton
 } from '@clerk/nextjs'
+import { useIsAdmin } from '@/lib/hooks/useIsAdmin' // 管理者判定フックをインポート
 
 export default function Header() {
+  const { isAdmin, isLoading } = useIsAdmin(); // 管理者判定フックを使用
   return (
     <header className='flex h-16 items-center justify-between border-b border-slate-200 px-6'>
       <h1 className='font-bold'>
@@ -22,7 +24,7 @@ export default function Header() {
       </h1>
       <div className='flex-1' />
       <nav className='hidden md:block'>
-        <ul className='flex list-none'>
+        <ul className='flex list-none items-center'>
           {navListItems.map(item => (
             <li key={item.href}>
               <Button variant='ghost' asChild>
@@ -30,6 +32,16 @@ export default function Header() {
               </Button>
             </li>
           ))}
+          {/* 管理者リンクの条件付き表示 */}
+          <SignedIn>
+            {!isLoading && isAdmin && (
+              <li>
+                <Button variant='ghost' asChild>
+                  <Link href='/admin'>ダッシュボード</Link>
+                </Button>
+              </li>
+            )}
+          </SignedIn>
         </ul>
       </nav>
       <SignedIn>
