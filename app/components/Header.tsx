@@ -90,7 +90,7 @@ export default function Header() {
       <div className='md:hidden'>
         <MobileNav />
       </div>
-      <div className='ml-2'>
+      <div className='ml-6'>
         <ModeToggle />
       </div>
     </header>

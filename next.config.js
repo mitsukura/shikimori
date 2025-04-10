@@ -8,6 +8,10 @@ const nextConfig = {
     // ビルド時のESLintチェックを一時的に無効化
     ignoreDuringBuilds: true,
   },
+  images: {
+    domains: ['loremflickr.com'],
+  
+  },
 };
 
 module.exports = nextConfig;

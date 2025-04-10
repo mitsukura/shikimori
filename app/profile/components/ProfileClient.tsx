@@ -160,8 +160,8 @@ export default function ProfileClient({ mode }: ProfileClientProps) {
 
   if (!user) {
     return (
-      <div className="max-w-2xl mx-auto p-4 bg-white dark:bg-slate-900 rounded-lg shadow dark:shadow-slate-800">
-        <h1 className="text-2xl font-bold mb-6">プロフィール</h1>
+      <div className="max-w-4xl mx-auto p-4 bg-white dark:bg-slate-900/20 rounded-lg shadow dark:shadow-slate-800/80">
+        <h1 className="heading2">プロフィール</h1>
         <p>プロフィールを表示するにはログインしてください。</p>
       </div>
     );

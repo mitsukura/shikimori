@@ -1,3 +1,10 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: '四季守とは | 四季守',
+  description: '四季守の概要を説明します。',
+};
+
 export default function About() {
   return (
     <>

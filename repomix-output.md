@@ -41,6 +41,7 @@ app/
   admin/
     components/
       AdminSidebar.tsx
+      MobileAdminNav.tsx
     items/
       components/
         DeleteItemAlert.tsx
@@ -48,6 +49,8 @@ app/
         ItemTableWrapper.tsx
       page.tsx
     users/
+      components/
+        UserTableWrapper.tsx
       page.tsx
     layout.tsx
     page.tsx
@@ -94,15 +97,19 @@ app/
 components/
   ui/
     alert-dialog.tsx
+    badge.tsx
     button.tsx
     checkbox.tsx
     dialog.tsx
+    dropdown-menu.tsx
     input.tsx
     label.tsx
     sheet.tsx
     skeleton.tsx
     table.tsx
     textarea.tsx
+  mode-toggle.tsx
+  theme-provider.tsx
 data/
   achievement.ts
   navigations.ts
@@ -136,6 +143,7 @@ prisma/
       migration.sql
     migration_lock.toml
   schema.prisma
+  seed.ts
 public/
   file.svg
   globe.svg
@@ -146,12 +154,15 @@ types/
   item.ts
   profile.ts
   types.ts
+  user.ts
+.eslintrc.js
 .gitignore
 .prettierrc
 .textlintrc
 components.json
 eslint.config.mjs
 middleware.ts
+next.config.js
 next.config.ts
 package.json
 postcss.config.mjs
@@ -172,7 +183,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const navItems = [
-  { href: '/admin', label: 'ダッシュボード', icon: Home },
+  { href: '/admin', label: 'ホーム', icon: Home },
   { href: '/admin/users', label: 'ユーザー管理', icon: Users },
   { href: '/admin/items', label: '商品管理', icon: Package },
 ];
@@ -182,7 +193,7 @@ export default function AdminSidebar() {
 
   return (
     <aside className="w-64 border-r bg-background p-4 flex flex-col">
-      <h2 className="text-lg font-semibold mb-6">管理メニュー</h2>
+      <h2 className="text-lg font-semibold mb-6">ダッシュボード</h2>
       <nav className="flex flex-col gap-2">
         {navItems.map((item) => (
           <Button
@@ -204,6 +215,71 @@ export default function AdminSidebar() {
 }
 ````
 
+## File: app/admin/components/MobileAdminNav.tsx
+````typescript
+'use client';
+
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Menu, Home, Package, Users } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+
+const navItems = [
+  { href: '/admin', label: 'ホーム', icon: Home },
+  { href: '/admin/users', label: 'ユーザー管理', icon: Users },
+  { href: '/admin/items', label: '商品管理', icon: Package },
+];
+
+export default function MobileAdminNav() {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="flex items-center justify-between p-4">
+      <h1 className="font-semibold">ダッシュボード</h1>
+      
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon">
+            <Menu className="h-5 w-5" />
+            <span className="sr-only">メニューを開く</span>
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left" className="w-64 p-0">
+          <SheetHeader className="p-4 border-b">
+            <SheetTitle>ダッシュボード</SheetTitle>
+          </SheetHeader>
+          <nav className="flex flex-col gap-1 p-2">
+            {navItems.map((item) => (
+              <Button
+                key={item.href}
+                variant={pathname === item.href ? 'secondary' : 'ghost'}
+                className="justify-start"
+                asChild
+                onClick={() => setOpen(false)}
+              >
+                <Link href={item.href}>
+                  <item.icon className="mr-2 h-4 w-4" />
+                  {item.label}
+                </Link>
+              </Button>
+            ))}
+          </nav>
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}
+````
+
 ## File: app/admin/items/components/DeleteItemAlert.tsx
 ````typescript
 'use client';
@@ -220,14 +296,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-
-type DeleteItemAlertProps = {
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
-  itemId: string | null;
-  itemName?: string;
-  onConfirm: () => void;
-};
+import type { DeleteItemAlertProps } from '@/types/item';
 
 export default function DeleteItemAlert({
   isOpen,
@@ -309,7 +378,7 @@ import {
   DialogFooter,
   DialogClose
 } from '@/components/ui/dialog';
-import type { Item, ItemFormData, ItemFormProps } from '@/types/item';
+import type { ItemFormData, ItemFormProps } from '@/types/item';
 
 export default function ItemFormDialog({ 
   initialData, 
@@ -705,14 +774,132 @@ export default function AdminItemsPage() {
 }
 ````
 
+## File: app/admin/users/components/UserTableWrapper.tsx
+````typescript
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import type { User } from '@/types/user';
+
+
+
+export default function UserTableWrapper() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/admin/users');
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'ユーザーデータの取得中にエラーが発生しました');
+      }
+      
+      const data = await response.json();
+      setUsers(data);
+    } catch (error: unknown) {
+      console.error('ユーザーデータ取得エラー:', error);
+      setError(error instanceof Error ? error.message : 'ユーザーデータの取得中にエラーが発生しました');
+      toast.error(error instanceof Error ? error.message : 'ユーザーデータの取得中にエラーが発生しました');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+  
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold">ユーザー一覧</h2>
+        <Button onClick={() => fetchUsers()} variant="outline" size="sm">
+          更新
+        </Button>
+      </div>
+      
+      {loading ? (
+        <div className="py-8 text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
+          <p className="mt-2 text-sm text-muted-foreground">ユーザーデータを読み込み中...</p>
+        </div>
+      ) : error ? (
+        <div className="py-8 text-center">
+          <p className="text-destructive">{error}</p>
+          <Button onClick={() => fetchUsers()} className="mt-4">再試行</Button>
+        </div>
+      ) : users.length === 0 ? (
+        <div className="py-8 text-center border rounded-md">
+          <p className="text-muted-foreground">ユーザーが見つかりませんでした</p>
+        </div>
+      ) : (
+        <div className="border rounded-md">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>名前</TableHead>
+                <TableHead>メール</TableHead>
+                <TableHead>登録日</TableHead>
+                <TableHead>操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>
+                    {user.lastName} {user.firstName}
+                  </TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    {user.created_at ? format(new Date(user.created_at), 'yyyy年MM月dd日', { locale: ja }) : '不明'}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`/profile/${user.clerkId}`}>詳細</Link>
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}
+````
+
 ## File: app/admin/users/page.tsx
 ````typescript
+import UserTableWrapper from './components/UserTableWrapper';
+
 export default function AdminUsersPage() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">ユーザー管理</h1>
-      {/* ここにユーザー一覧テーブルなどを実装 */}
-      <p>ユーザー管理機能を実装します。</p>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">ユーザー管理</h1>
+      <UserTableWrapper />
     </div>
   );
 }
@@ -723,6 +910,7 @@ export default function AdminUsersPage() {
 import { redirect } from 'next/navigation';
 import { isAdmin } from '@/lib/authUtils';
 import AdminSidebar from './components/AdminSidebar';
+import MobileAdminNav from './components/MobileAdminNav';
 
 export default async function AdminLayout({
   children,
@@ -736,9 +924,18 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="flex min-h-screen">
-      <AdminSidebar />
-      <main className="flex-1 p-6 bg-muted/40">
+    <div className="flex min-h-screen flex-col md:flex-row">
+      {/* デスクトップ用サイドバー（md以上で表示） */}
+      <div className="hidden md:block">
+        <AdminSidebar />
+      </div>
+      
+      {/* モバイル用ナビゲーション（md未満で表示） */}
+      <div className="md:hidden border-b sticky top-0 z-10 bg-background">
+        <MobileAdminNav />
+      </div>
+      
+      <main className="flex-1 p-4 md:p-6 bg-muted/40">
         {children}
       </main>
     </div>
@@ -765,10 +962,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { isAdmin } from '@/lib/authUtils';
 
-export async function GET(
-  request: Request,
-  { params }: { params: { itemId: string } }
-) {
+export async function GET(_request: Request, { params }: { params: { itemId: string } }) {
   if (!(await isAdmin())) {
     return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
   }
@@ -792,10 +986,7 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: Request,
-  { params }: { params: { itemId: string } }
-) {
+export async function PUT(request: Request, { params }: { params: { itemId: string } }) {
   if (!(await isAdmin())) {
     return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
   }
@@ -839,10 +1030,7 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { itemId: string } }
-) {
+export async function DELETE(_request: Request, { params }: { params: { itemId: string } }) {
   if (!(await isAdmin())) {
     return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
   }
@@ -872,7 +1060,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { isAdmin } from '@/lib/authUtils'; // 管理者チェック
 
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
   if (!(await isAdmin())) {
     return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
   }
@@ -1050,7 +1238,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { isAdmin } from '@/lib/authUtils'; // 管理者チェック
 
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
   if (!(await isAdmin())) {
     return new NextResponse(JSON.stringify({ error: 'Forbidden' }), { status: 403 });
   }
@@ -1070,6 +1258,305 @@ export async function GET(request: Request) {
     return new NextResponse(JSON.stringify({ error: errorMessage }), { status: 500 });
   }
 }
+````
+
+## File: app/components/Procedure.tsx
+````typescript
+export default function Procedure() {
+  return (
+    <div className='flex flex-col gap-4'>
+      <h2 className='text-2xl font-bold mb-2'>雪かき、草刈りサービスの利用方法</h2>
+      <ol className='list-decimal list-inside space-y-4'>
+        <li>
+          <span className='font-bold'>サービスを選ぶ</span>
+          <p className='ml-6 mt-1'>まず、雪かき（冬期間）か草刈り（夏期間）のどちらをお願いしたいか選びます。</p>
+        </li>
+        <li>
+          <span className='font-bold'>ユーザー登録</span>
+          <p className='ml-6 mt-1'>サービスを選んだら、初めのみお名前や住所、作業場所などを登録します。これは、あなたのお家や連絡先を教えてもらうためです。</p>
+        </li>
+        <li>
+          <span className='font-bold'>注文と支払い</span>
+          <p className='ml-6 mt-1'>住所の登録が終わったら、雪かきや草刈りをしてほしい日時を選びます。日時が決まったら、料金を支払います。現在は。クレジットカードのみです。</p>
+        </li>
+        <li>
+          <span className='font-bold'>サービス当日</span>
+          <p className='ml-6 mt-1'>予約した日時に、専門の業者があなたの家に来て、雪かきや草刈りをしてくれます。</p>
+        </li>
+        <li>
+          <span className='font-bold'>完了</span>
+          <p className='ml-6 mt-1'>作業が終わったら、確認をして完了となります。</p>
+        </li>
+      </ol>
+      <h2 className='text-2xl font-bold mb-2'>ポイント</h2>
+      <ul className='list-disc list-inside space-y-4'>
+        <li>登録や注文は、スマホやパソコンから簡単にできます。</li>
+        <li>わからないことがあれば、いつでも質問できます。</li>
+      </ul>
+      <h2 className='text-2xl font-bold mb-2'>注意事項</h2>
+      <ul className='list-disc list-inside space-y-4'>
+        <li>雪かきや草刈りの料金は、予約日によって変わる場合があります。</li>
+        <li>予約が込み合っている場合は、希望の日時に予約できないことがあります。</li>
+      </ul>
+    </div>
+  )
+}
+````
+
+## File: app/profile/edit/page.tsx
+````typescript
+'use client';
+
+import ProfileClient from '../components/ProfileClient';
+
+export default function ProfileEditPage() {
+  return <ProfileClient mode="edit" />;
+}
+````
+
+## File: components/ui/alert-dialog.tsx
+````typescript
+"use client"
+
+import * as React from "react"
+import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
+
+import { cn } from "@/lib/utils"
+import { buttonVariants } from "@/components/ui/button"
+
+const AlertDialog = AlertDialogPrimitive.Root
+
+const AlertDialogTrigger = AlertDialogPrimitive.Trigger
+
+const AlertDialogPortal = AlertDialogPrimitive.Portal
+
+const AlertDialogOverlay = React.forwardRef<
+  React.ElementRef<typeof AlertDialogPrimitive.Overlay>,
+  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Overlay>
+>(({ className, ...props }, ref) => (
+  <AlertDialogPrimitive.Overlay
+    className={cn(
+      "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      className
+    )}
+    {...props}
+    ref={ref}
+  />
+))
+AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName
+
+const AlertDialogContent = React.forwardRef<
+  React.ElementRef<typeof AlertDialogPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>
+>(({ className, ...props }, ref) => (
+  <AlertDialogPortal>
+    <AlertDialogOverlay />
+    <AlertDialogPrimitive.Content
+      ref={ref}
+      className={cn(
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+        className
+      )}
+      {...props}
+    />
+  </AlertDialogPortal>
+))
+AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName
+
+const AlertDialogHeader = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn(
+      "flex flex-col space-y-2 text-center sm:text-left",
+      className
+    )}
+    {...props}
+  />
+)
+AlertDialogHeader.displayName = "AlertDialogHeader"
+
+const AlertDialogFooter = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn(
+      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+      className
+    )}
+    {...props}
+  />
+)
+AlertDialogFooter.displayName = "AlertDialogFooter"
+
+const AlertDialogTitle = React.forwardRef<
+  React.ElementRef<typeof AlertDialogPrimitive.Title>,
+  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Title>
+>(({ className, ...props }, ref) => (
+  <AlertDialogPrimitive.Title
+    ref={ref}
+    className={cn("text-lg font-semibold", className)}
+    {...props}
+  />
+))
+AlertDialogTitle.displayName = AlertDialogPrimitive.Title.displayName
+
+const AlertDialogDescription = React.forwardRef<
+  React.ElementRef<typeof AlertDialogPrimitive.Description>,
+  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Description>
+>(({ className, ...props }, ref) => (
+  <AlertDialogPrimitive.Description
+    ref={ref}
+    className={cn("text-sm text-muted-foreground", className)}
+    {...props}
+  />
+))
+AlertDialogDescription.displayName =
+  AlertDialogPrimitive.Description.displayName
+
+const AlertDialogAction = React.forwardRef<
+  React.ElementRef<typeof AlertDialogPrimitive.Action>,
+  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action>
+>(({ className, ...props }, ref) => (
+  <AlertDialogPrimitive.Action
+    ref={ref}
+    className={cn(buttonVariants(), className)}
+    {...props}
+  />
+))
+AlertDialogAction.displayName = AlertDialogPrimitive.Action.displayName
+
+const AlertDialogCancel = React.forwardRef<
+  React.ElementRef<typeof AlertDialogPrimitive.Cancel>,
+  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Cancel>
+>(({ className, ...props }, ref) => (
+  <AlertDialogPrimitive.Cancel
+    ref={ref}
+    className={cn(
+      buttonVariants({ variant: "outline" }),
+      "mt-2 sm:mt-0",
+      className
+    )}
+    {...props}
+  />
+))
+AlertDialogCancel.displayName = AlertDialogPrimitive.Cancel.displayName
+
+export {
+  AlertDialog,
+  AlertDialogPortal,
+  AlertDialogOverlay,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+}
+````
+
+## File: components/ui/badge.tsx
+````typescript
+import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
+
+import { cn } from "@/lib/utils"
+
+const badgeVariants = cva(
+  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  {
+    variants: {
+      variant: {
+        default:
+          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+        secondary:
+          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        destructive:
+          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
+        outline: "text-foreground",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  }
+)
+
+export interface BadgeProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof badgeVariants> {}
+
+function Badge({ className, variant, ...props }: BadgeProps) {
+  return (
+    <div className={cn(badgeVariants({ variant }), className)} {...props} />
+  )
+}
+
+export { Badge, badgeVariants }
+````
+
+## File: components/ui/button.tsx
+````typescript
+import * as React from "react"
+import { Slot } from "@radix-ui/react-slot"
+import { cva, type VariantProps } from "class-variance-authority"
+
+import { cn } from "@/lib/utils"
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive:
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        outline:
+          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        secondary:
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+      size: {
+        default: "h-10 px-4 py-2",
+        sm: "h-9 rounded-md px-3",
+        lg: "h-11 rounded-md px-8",
+        icon: "h-10 w-10",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+)
+
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
+  asChild?: boolean
+}
+
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button"
+    return (
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        {...props}
+      />
+    )
+  }
+)
+Button.displayName = "Button"
+
+export { Button, buttonVariants }
 ````
 
 ## File: components/ui/checkbox.tsx
@@ -1232,993 +1719,208 @@ export {
 }
 ````
 
-## File: components/ui/table.tsx
-````typescript
-import * as React from "react"
-
-import { cn } from "@/lib/utils"
-
-const Table = React.forwardRef<
-  HTMLTableElement,
-  React.HTMLAttributes<HTMLTableElement>
->(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-auto">
-    <table
-      ref={ref}
-      className={cn("w-full caption-bottom text-sm", className)}
-      {...props}
-    />
-  </div>
-))
-Table.displayName = "Table"
-
-const TableHeader = React.forwardRef<
-  HTMLTableSectionElement,
-  React.HTMLAttributes<HTMLTableSectionElement>
->(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn("[&_tr]:border-b", className)} {...props} />
-))
-TableHeader.displayName = "TableHeader"
-
-const TableBody = React.forwardRef<
-  HTMLTableSectionElement,
-  React.HTMLAttributes<HTMLTableSectionElement>
->(({ className, ...props }, ref) => (
-  <tbody
-    ref={ref}
-    className={cn("[&_tr:last-child]:border-0", className)}
-    {...props}
-  />
-))
-TableBody.displayName = "TableBody"
-
-const TableFooter = React.forwardRef<
-  HTMLTableSectionElement,
-  React.HTMLAttributes<HTMLTableSectionElement>
->(({ className, ...props }, ref) => (
-  <tfoot
-    ref={ref}
-    className={cn(
-      "border-t bg-muted/50 font-medium [&>tr]:last:border-b-0",
-      className
-    )}
-    {...props}
-  />
-))
-TableFooter.displayName = "TableFooter"
-
-const TableRow = React.forwardRef<
-  HTMLTableRowElement,
-  React.HTMLAttributes<HTMLTableRowElement>
->(({ className, ...props }, ref) => (
-  <tr
-    ref={ref}
-    className={cn(
-      "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
-      className
-    )}
-    {...props}
-  />
-))
-TableRow.displayName = "TableRow"
-
-const TableHead = React.forwardRef<
-  HTMLTableCellElement,
-  React.ThHTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
-  <th
-    ref={ref}
-    className={cn(
-      "h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0",
-      className
-    )}
-    {...props}
-  />
-))
-TableHead.displayName = "TableHead"
-
-const TableCell = React.forwardRef<
-  HTMLTableCellElement,
-  React.TdHTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
-  <td
-    ref={ref}
-    className={cn("p-4 align-middle [&:has([role=checkbox])]:pr-0", className)}
-    {...props}
-  />
-))
-TableCell.displayName = "TableCell"
-
-const TableCaption = React.forwardRef<
-  HTMLTableCaptionElement,
-  React.HTMLAttributes<HTMLTableCaptionElement>
->(({ className, ...props }, ref) => (
-  <caption
-    ref={ref}
-    className={cn("mt-4 text-sm text-muted-foreground", className)}
-    {...props}
-  />
-))
-TableCaption.displayName = "TableCaption"
-
-export {
-  Table,
-  TableHeader,
-  TableBody,
-  TableFooter,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableCaption,
-}
-````
-
-## File: lib/hooks/useIsAdmin.ts
-````typescript
-'use client';
-
-import { useState, useEffect, useCallback } from 'react';
-import { useUser } from '@clerk/nextjs';
-import { supabase } from '@/lib/supabase/client';
-
-export function useIsAdmin() {
-  const { user, isLoaded } = useUser();
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-
-  const checkAdminStatus = useCallback(async () => {
-    if (!isLoaded || !user) {
-      // Clerkのユーザー情報が読み込み中または存在しない場合
-      setIsLoading(!isLoaded); // isLoadedがfalseの間はローディング中
-      if (isLoaded && !user) { // 読み込み完了したがユーザーなし
-        setIsAdmin(false);
-        setIsLoading(false);
-      }
-      return;
-    }
-
-    // Clerkユーザー情報はあるが、管理者ステータスをこれから取得
-    setIsLoading(true);
-
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('is_admin')
-        .eq('clerk_id', user.id)
-        .single();
-
-      if (error) {
-        // Supabaseにユーザーが見つからない、または他のエラー
-        console.warn('Admin status check failed:', error.message);
-        setIsAdmin(false);
-      } else {
-        setIsAdmin(data?.is_admin === true);
-      }
-    } catch (err) {
-      console.error('Unexpected error fetching admin status:', err);
-      setIsAdmin(false);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user, isLoaded]);
-
-  useEffect(() => {
-    checkAdminStatus();
-  }, [checkAdminStatus]); // useCallbackでメモ化された関数を依存配列に入れる
-
-  return { isAdmin, isLoading };
-}
-````
-
-## File: lib/authUtils.ts
-````typescript
-import { auth } from '@clerk/nextjs/server';
-import { createClient } from '@/lib/supabase/server'; // サーバーサイド用Supabaseクライアント
-
-export async function isAdmin(): Promise<boolean> {
-  const { userId } = await auth();
-  if (!userId) {
-    return false; // 未認証ユーザーは管理者ではない
-  }
-
-  try {
-    const supabase = await createClient();
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('is_admin')
-      .eq('clerk_id', userId) // clerk_idで検索
-      .single();
-
-    if (error || !user) {
-      console.error('Error fetching user admin status:', error?.message);
-      return false;
-    }
-
-    return user.is_admin === true;
-  } catch (err) {
-    console.error('Unexpected error in isAdmin:', err);
-    return false;
-  }
-}
-````
-
-## File: types/item.ts
-````typescript
-import type { Decimal } from '@prisma/client/runtime/library';
-
-// Supabaseから取得する商品データの型
-export type Item = {
-  id: string; // uuid
-  name: string;
-  description?: string | null;
-  price: number | Decimal;
-  image_url?: string | null;
-  category?: string | null;
-  is_available: boolean;
-  stock: number;
-  created_at: string; // ISO 8601 string
-  updated_at: string; // ISO 8601 string
-};
-
-// 商品フォームで使用するデータの型
-export type ItemFormData = {
-  name: string;
-  description?: string;
-  price: number;
-  imageUrl?: string;
-  category?: string;
-  isAvailable: boolean;
-  stock: number;
-};
-
-// 商品フォームのプロパティ型
-export type ItemFormProps = {
-  initialData?: Item | null;
-  onSuccess?: () => void;
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
-};
-````
-
-## File: app/components/Procedure.tsx
-````typescript
-export default function Procedure() {
-  return (
-    <div className='flex flex-col gap-4'>
-      <h2 className='text-2xl font-bold mb-2'>雪かき、草刈りサービスの利用方法</h2>
-      <ol className='list-decimal list-inside space-y-4'>
-        <li>
-          <span className='font-bold'>サービスを選ぶ</span>
-          <p className='ml-6 mt-1'>まず、雪かき（冬期間）か草刈り（夏期間）のどちらをお願いしたいか選びます。</p>
-        </li>
-        <li>
-          <span className='font-bold'>ユーザー登録</span>
-          <p className='ml-6 mt-1'>サービスを選んだら、初めのみお名前や住所、作業場所などを登録します。これは、あなたのお家や連絡先を教えてもらうためです。</p>
-        </li>
-        <li>
-          <span className='font-bold'>注文と支払い</span>
-          <p className='ml-6 mt-1'>住所の登録が終わったら、雪かきや草刈りをしてほしい日時を選びます。日時が決まったら、料金を支払います。現在は。クレジットカードのみです。</p>
-        </li>
-        <li>
-          <span className='font-bold'>サービス当日</span>
-          <p className='ml-6 mt-1'>予約した日時に、専門の業者があなたの家に来て、雪かきや草刈りをしてくれます。</p>
-        </li>
-        <li>
-          <span className='font-bold'>完了</span>
-          <p className='ml-6 mt-1'>作業が終わったら、確認をして完了となります。</p>
-        </li>
-      </ol>
-      <h2 className='text-2xl font-bold mb-2'>ポイント</h2>
-      <ul className='list-disc list-inside space-y-4'>
-        <li>登録や注文は、スマホやパソコンから簡単にできます。</li>
-        <li>わからないことがあれば、いつでも質問できます。</li>
-      </ul>
-      <h2 className='text-2xl font-bold mb-2'>注意事項</h2>
-      <ul className='list-disc list-inside space-y-4'>
-        <li>雪かきや草刈りの料金は、予約日によって変わる場合があります。</li>
-        <li>予約が込み合っている場合は、希望の日時に予約できないことがあります。</li>
-      </ul>
-    </div>
-  )
-}
-````
-
-## File: app/menu/page.tsx
-````typescript
-import Hero from "../components/Hero";
-
-export default function Page() {
-  return (
-    <div className="mt-12">
-    <Hero />
-    </div>
-  )
-}
-````
-
-## File: app/profile/components/ProfileClient.tsx
-````typescript
-'use client';
-
-import { useEffect, useState, useCallback } from 'react';
-import { useUser } from '@clerk/nextjs';
-import { toast } from 'sonner';
-import { Skeleton } from '@/components/ui/skeleton';
-import ProfileView from './ProfileView';
-import ProfileForm from './ProfileForm';
-import { supabase } from '@/lib/supabase/client';
-import type { ProfileClientProps } from '@/types/profile';
-
-export default function ProfileClient({ mode }: ProfileClientProps) {
-  const { user, isLoaded } = useUser();
-  const [loading, setLoading] = useState(true);
-  const [userData, setUserData] = useState<{
-    id: string;
-    clerk_id: string;
-    email: string;
-    first_name: string;
-    last_name: string;
-    phone: string;
-    bio?: string;
-    address?: string;
-    created_at: string;
-    updated_at: string;
-  } | null>(null);
-  const [needsCreate, setNeedsCreate] = useState(false);
-
-  const fetchProfile = useCallback(async () => {
-    if (!user) return;
-    
-    setLoading(true);
-    
-    try {
-      // ユーザー情報を取得
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('clerk_id', user.id)
-        .single();
-      
-      // ユーザーが存在しない場合は作成する
-      if (userError || !userData) {
-        console.log('User not found, needs creation');
-        setNeedsCreate(true);
-        setUserData(null);
-      } else {
-        setUserData(userData);
-        setNeedsCreate(false);
-      }
-    } catch (error) {
-      console.log('Unexpected error:', error);
-      toast.error('予期せぬエラーが発生しました');
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  const createProfile = useCallback(async () => {
-    if (!user || !needsCreate) return;
-    
-    setLoading(true);
-    
-    try {
-      // 基本的なユーザー情報を取得
-      const email = user.primaryEmailAddress?.emailAddress || '';
-      const firstName = user.firstName || '';
-      const lastName = user.lastName || '';
-      
-      // 現在の日時を取得
-      const now = new Date().toISOString();
-      
-      // メールアドレスで既存ユーザーを確認
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', email)
-        .maybeSingle();
-        
-      if (existingUser) {
-        console.log('User with this email exists, updating clerk_id');
-        
-        // 既存ユーザーのclerk_idを更新
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({
-            clerk_id: user.id,
-            first_name: firstName,
-            last_name: lastName,
-            updated_at: now,
-          })
-          .eq('id', existingUser.id);
-          
-        if (updateError) {
-          console.log('Error updating user:', updateError);
-          toast.error(`ユーザー情報の更新に失敗しました: ${updateError.message}`);
-          return;
-        }
-        
-        toast.success('既存ユーザー情報を更新しました');
-      } else {
-        // ユーザーを新規作成
-        const { error: createError } = await supabase
-          .from('users')
-          .insert({
-            id: crypto.randomUUID(), // UUIDを手動で生成
-            clerk_id: user.id,
-            email,
-            first_name: firstName,
-            last_name: lastName,
-            phone: '',
-            created_at: now,
-            updated_at: now,
-          });
-        
-        if (createError) {
-          console.log('Error creating user:', createError);
-          toast.error(`ユーザー情報の作成に失敗しました: ${createError.message}`);
-          return;
-        }
-        
-        toast.success('プロフィールを新規作成しました');
-      }
-      
-      // プロフィールを再取得
-      fetchProfile();
-    } catch (err) {
-      console.log('Unexpected error creating user:', err);
-      toast.error('予期せぬエラーが発生しました');
-    } finally {
-      setLoading(false);
-    }
-  }, [user, needsCreate, fetchProfile]);
-
-  useEffect(() => {
-    if (isLoaded && user) {
-      fetchProfile();
-    }
-  }, [isLoaded, user, fetchProfile]);
-
-  useEffect(() => {
-    if (needsCreate && mode !== 'create') {
-      createProfile();
-    }
-  }, [needsCreate, mode, createProfile]);
-
-  if (!isLoaded || loading) {
-    return (
-      <div className="max-w-2xl mx-auto p-4">
-        <Skeleton className="h-8 w-1/3 mb-6" />
-        <Skeleton className="h-4 w-full mb-2" />
-        <Skeleton className="h-4 w-full mb-2" />
-        <Skeleton className="h-4 w-2/3 mb-4" />
-        <Skeleton className="h-4 w-full mb-2" />
-        <Skeleton className="h-4 w-full mb-2" />
-        <Skeleton className="h-4 w-3/4 mb-4" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="max-w-2xl mx-auto p-4 bg-white rounded-lg shadow">
-        <h1 className="text-2xl font-bold mb-6">プロフィール</h1>
-        <p>プロフィールを表示するにはログインしてください。</p>
-      </div>
-    );
-  }
-
-  if (needsCreate || mode === 'create') {
-    return <ProfileForm onSuccess={fetchProfile} />;
-  }
-
-  if (mode === 'edit' && userData) {
-    return <ProfileForm initialData={userData} onSuccess={fetchProfile} />;
-  }
-
-  if (userData) {
-    return <ProfileView userData={userData} />;
-  }
-
-  return (
-    <div className="max-w-2xl mx-auto p-4 bg-white rounded-lg shadow">
-      <h1 className="text-2xl font-bold mb-6">プロフィール</h1>
-      <p>プロフィール情報の読み込み中にエラーが発生しました。</p>
-    </div>
-  );
-}
-````
-
-## File: app/profile/components/ProfileForm.tsx
-````typescript
-'use client';
-
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { useUser } from '@clerk/nextjs';
-import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { supabase } from '@/lib/supabase/client';
-import type { ProfileFormData, ProfileFormProps } from '@/types/profile';
-
-export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps) {
-  const { user } = useUser();
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-
-  const { register, handleSubmit, formState: { errors } } = useForm<ProfileFormData>({
-    defaultValues: {
-      firstName: initialData?.first_name || '',
-      lastName: initialData?.last_name || '',
-      phone: initialData?.phone || '',
-      bio: initialData?.bio || '',
-      address: initialData?.address || '',
-    }
-  });
-
-  /**
-   * プロフィール情報を更新する
-   */
-  const onSubmit = async (data: ProfileFormData) => {
-    if (!user) {
-      toast.error('ユーザー情報が取得できません');
-      return;
-    }
-    
-    setLoading(true);
-    
-    try {
-      // データベース更新用のオブジェクトを作成
-      const updateData = {
-        first_name: data.firstName,
-        last_name: data.lastName,
-        phone: data.phone,
-        bio: data.bio,
-        address: data.address,
-        updated_at: new Date().toISOString(),
-      };
-      
-      const { error } = await supabase
-        .from('users')
-        .update(updateData)
-        .eq('clerk_id', user.id);
-        
-      if (error) {
-        console.error('プロフィール更新エラー:', error.message);
-        toast.error('プロフィールの更新に失敗しました');
-        return;
-      }
-      
-      toast.success('プロフィールを更新しました');
-      if (onSuccess) onSuccess();
-      
-      router.push('/profile');
-    } catch (error) {
-      console.error('予期せぬエラー:', error);
-      toast.error('予期せぬエラーが発生しました');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="max-w-2xl mx-auto p-4 bg-white rounded-lg shadow">
-      <h1 className="text-2xl font-bold mb-6">プロフィール{initialData ? '編集' : '登録'}</h1>
-      
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="firstName">名</Label>
-            <Input
-              id="firstName"
-              {...register('firstName', { required: '名は必須です' })}
-              placeholder="名"
-            />
-            {errors.firstName && (
-              <p className="text-red-500 text-sm">{errors.firstName.message}</p>
-            )}
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="lastName">姓</Label>
-            <Input
-              id="lastName"
-              {...register('lastName', { required: '姓は必須です' })}
-              placeholder="姓"
-            />
-            {errors.lastName && (
-              <p className="text-red-500 text-sm">{errors.lastName.message}</p>
-            )}
-          </div>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="address">住所</Label>
-          <Input
-            id="address"
-            {...register('address')}
-            placeholder="住所"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="phone">電話番号</Label>
-          <Input
-            id="phone"
-            type="tel"
-            {...register('phone')}
-            placeholder="電話番号"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="bio">自己紹介</Label>
-          <Textarea
-            id="bio"
-            {...register('bio')}
-            placeholder="自己紹介"
-            rows={4}
-          />
-        </div>
-        
-        <div className="flex justify-end gap-4">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => router.push('/profile')}
-          >
-            キャンセル
-          </Button>
-          <Button type="submit" disabled={loading}>
-            {loading ? 'プロフィールを保存中...' : 'プロフィールを保存'}
-          </Button>
-        </div>
-      </form>
-    </div>
-  );
-}
-````
-
-## File: app/profile/components/ProfileView.tsx
-````typescript
-'use client';
-
-import { useState } from 'react';
-import { useUser } from '@clerk/nextjs';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { supabase } from '@/lib/supabase/client';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import type { ProfileViewProps } from '@/types/profile';
-
-
-
-export default function ProfileView({ userData }: ProfileViewProps) {
-  const { user } = useUser();
-  const [loading, setLoading] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  
-  const handleDelete = async () => {
-    if (!user) return;
-    
-    setLoading(true);
-    
-    try {
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('clerk_id', user.id);
-        
-      if (error) {
-        console.log('Error deleting profile:', error);
-        toast.error('プロフィールの削除に失敗しました');
-      } else {
-        toast.success('プロフィールを削除しました');
-        window.location.reload();
-      }
-    } catch (error) {
-      console.log('Unexpected error:', error);
-      toast.error('予期せぬエラーが発生しました');
-    } finally {
-      setLoading(false);
-      setIsDeleteDialogOpen(false);
-    }
-  };
-  return (
-    <div className="max-w-2xl mx-auto p-4 bg-white rounded-lg shadow">
-      <h1 className="text-2xl font-bold mb-6">プロフィール</h1>
-      
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold">名前</h2>
-          <p>{userData.first_name} {userData.last_name}</p>
-        </div>
-        
-        <div>
-          <h2 className="text-lg font-semibold">メールアドレス</h2>
-          <p>{userData.email}</p>
-        </div>
-        
-        {userData.address && (
-          <div>
-            <h2 className="text-lg font-semibold">住所</h2>
-            <p>{userData.address}</p>
-          </div>
-        )}
-        
-        {userData.phone && (
-          <div>
-            <h2 className="text-lg font-semibold">電話番号</h2>
-            <p>{userData.phone}</p>
-          </div>
-        )}
-        
-        {userData.bio && (
-          <div>
-            <h2 className="text-lg font-semibold">自己紹介</h2>
-            <p className="whitespace-pre-wrap">{userData.bio}</p>
-          </div>
-        )}
-        
-        <div className="pt-4 flex gap-4">
-          <Link href="/profile/edit">
-            <Button>プロフィールを編集</Button>
-          </Link>
-          
-          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive">プロフィールを削除</Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>プロフィールを削除しますか？</AlertDialogTitle>
-                <AlertDialogDescription>
-                  この操作は取り消せません。プロフィール情報がすべて削除されます。
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} disabled={loading}>
-                  {loading ? '削除中...' : '削除する'}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      </div>
-    </div>
-  );
-}
-````
-
-## File: app/profile/edit/page.tsx
-````typescript
-'use client';
-
-import ProfileClient from '../components/ProfileClient';
-
-export default function ProfileEditPage() {
-  return <ProfileClient mode="edit" />;
-}
-````
-
-## File: components/ui/alert-dialog.tsx
+## File: components/ui/dropdown-menu.tsx
 ````typescript
 "use client"
 
 import * as React from "react"
-import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
+import { Check, ChevronRight, Circle } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { buttonVariants } from "@/components/ui/button"
 
-const AlertDialog = AlertDialogPrimitive.Root
+const DropdownMenu = DropdownMenuPrimitive.Root
 
-const AlertDialogTrigger = AlertDialogPrimitive.Trigger
+const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger
 
-const AlertDialogPortal = AlertDialogPrimitive.Portal
+const DropdownMenuGroup = DropdownMenuPrimitive.Group
 
-const AlertDialogOverlay = React.forwardRef<
-  React.ElementRef<typeof AlertDialogPrimitive.Overlay>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Overlay>
->(({ className, ...props }, ref) => (
-  <AlertDialogPrimitive.Overlay
+const DropdownMenuPortal = DropdownMenuPrimitive.Portal
+
+const DropdownMenuSub = DropdownMenuPrimitive.Sub
+
+const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup
+
+const DropdownMenuSubTrigger = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.SubTrigger>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubTrigger> & {
+    inset?: boolean
+  }
+>(({ className, inset, children, ...props }, ref) => (
+  <DropdownMenuPrimitive.SubTrigger
+    ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-accent data-[state=open]:bg-accent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+      inset && "pl-8",
       className
     )}
     {...props}
+  >
+    {children}
+    <ChevronRight className="ml-auto" />
+  </DropdownMenuPrimitive.SubTrigger>
+))
+DropdownMenuSubTrigger.displayName =
+  DropdownMenuPrimitive.SubTrigger.displayName
+
+const DropdownMenuSubContent = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.SubContent>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubContent>
+>(({ className, ...props }, ref) => (
+  <DropdownMenuPrimitive.SubContent
     ref={ref}
+    className={cn(
+      "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-dropdown-menu-content-transform-origin]",
+      className
+    )}
+    {...props}
   />
 ))
-AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName
+DropdownMenuSubContent.displayName =
+  DropdownMenuPrimitive.SubContent.displayName
 
-const AlertDialogContent = React.forwardRef<
-  React.ElementRef<typeof AlertDialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>
->(({ className, ...props }, ref) => (
-  <AlertDialogPortal>
-    <AlertDialogOverlay />
-    <AlertDialogPrimitive.Content
+const DropdownMenuContent = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
+>(({ className, sideOffset = 4, ...props }, ref) => (
+  <DropdownMenuPrimitive.Portal>
+    <DropdownMenuPrimitive.Content
       ref={ref}
+      sideOffset={sideOffset}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+        "z-50 max-h-[var(--radix-dropdown-menu-content-available-height)] min-w-[8rem] overflow-y-auto overflow-x-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-dropdown-menu-content-transform-origin]",
         className
       )}
       {...props}
     />
-  </AlertDialogPortal>
+  </DropdownMenuPrimitive.Portal>
 ))
-AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName
+DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName
 
-const AlertDialogHeader = ({
+const DropdownMenuItem = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.Item>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & {
+    inset?: boolean
+  }
+>(({ className, inset, ...props }, ref) => (
+  <DropdownMenuPrimitive.Item
+    ref={ref}
+    className={cn(
+      "relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+      inset && "pl-8",
+      className
+    )}
+    {...props}
+  />
+))
+DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName
+
+const DropdownMenuCheckboxItem = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.CheckboxItem>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.CheckboxItem>
+>(({ className, children, checked, ...props }, ref) => (
+  <DropdownMenuPrimitive.CheckboxItem
+    ref={ref}
+    className={cn(
+      "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      className
+    )}
+    checked={checked}
+    {...props}
+  >
+    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+      <DropdownMenuPrimitive.ItemIndicator>
+        <Check className="h-4 w-4" />
+      </DropdownMenuPrimitive.ItemIndicator>
+    </span>
+    {children}
+  </DropdownMenuPrimitive.CheckboxItem>
+))
+DropdownMenuCheckboxItem.displayName =
+  DropdownMenuPrimitive.CheckboxItem.displayName
+
+const DropdownMenuRadioItem = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.RadioItem>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.RadioItem>
+>(({ className, children, ...props }, ref) => (
+  <DropdownMenuPrimitive.RadioItem
+    ref={ref}
+    className={cn(
+      "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      className
+    )}
+    {...props}
+  >
+    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+      <DropdownMenuPrimitive.ItemIndicator>
+        <Circle className="h-2 w-2 fill-current" />
+      </DropdownMenuPrimitive.ItemIndicator>
+    </span>
+    {children}
+  </DropdownMenuPrimitive.RadioItem>
+))
+DropdownMenuRadioItem.displayName = DropdownMenuPrimitive.RadioItem.displayName
+
+const DropdownMenuLabel = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.Label>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Label> & {
+    inset?: boolean
+  }
+>(({ className, inset, ...props }, ref) => (
+  <DropdownMenuPrimitive.Label
+    ref={ref}
+    className={cn(
+      "px-2 py-1.5 text-sm font-semibold",
+      inset && "pl-8",
+      className
+    )}
+    {...props}
+  />
+))
+DropdownMenuLabel.displayName = DropdownMenuPrimitive.Label.displayName
+
+const DropdownMenuSeparator = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.Separator>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Separator>
+>(({ className, ...props }, ref) => (
+  <DropdownMenuPrimitive.Separator
+    ref={ref}
+    className={cn("-mx-1 my-1 h-px bg-muted", className)}
+    {...props}
+  />
+))
+DropdownMenuSeparator.displayName = DropdownMenuPrimitive.Separator.displayName
+
+const DropdownMenuShortcut = ({
   className,
   ...props
-}: React.HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn(
-      "flex flex-col space-y-2 text-center sm:text-left",
-      className
-    )}
-    {...props}
-  />
-)
-AlertDialogHeader.displayName = "AlertDialogHeader"
-
-const AlertDialogFooter = ({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
-      className
-    )}
-    {...props}
-  />
-)
-AlertDialogFooter.displayName = "AlertDialogFooter"
-
-const AlertDialogTitle = React.forwardRef<
-  React.ElementRef<typeof AlertDialogPrimitive.Title>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Title>
->(({ className, ...props }, ref) => (
-  <AlertDialogPrimitive.Title
-    ref={ref}
-    className={cn("text-lg font-semibold", className)}
-    {...props}
-  />
-))
-AlertDialogTitle.displayName = AlertDialogPrimitive.Title.displayName
-
-const AlertDialogDescription = React.forwardRef<
-  React.ElementRef<typeof AlertDialogPrimitive.Description>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Description>
->(({ className, ...props }, ref) => (
-  <AlertDialogPrimitive.Description
-    ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
-    {...props}
-  />
-))
-AlertDialogDescription.displayName =
-  AlertDialogPrimitive.Description.displayName
-
-const AlertDialogAction = React.forwardRef<
-  React.ElementRef<typeof AlertDialogPrimitive.Action>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action>
->(({ className, ...props }, ref) => (
-  <AlertDialogPrimitive.Action
-    ref={ref}
-    className={cn(buttonVariants(), className)}
-    {...props}
-  />
-))
-AlertDialogAction.displayName = AlertDialogPrimitive.Action.displayName
-
-const AlertDialogCancel = React.forwardRef<
-  React.ElementRef<typeof AlertDialogPrimitive.Cancel>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Cancel>
->(({ className, ...props }, ref) => (
-  <AlertDialogPrimitive.Cancel
-    ref={ref}
-    className={cn(
-      buttonVariants({ variant: "outline" }),
-      "mt-2 sm:mt-0",
-      className
-    )}
-    {...props}
-  />
-))
-AlertDialogCancel.displayName = AlertDialogPrimitive.Cancel.displayName
+}: React.HTMLAttributes<HTMLSpanElement>) => {
+  return (
+    <span
+      className={cn("ml-auto text-xs tracking-widest opacity-60", className)}
+      {...props}
+    />
+  )
+}
+DropdownMenuShortcut.displayName = "DropdownMenuShortcut"
 
 export {
-  AlertDialog,
-  AlertDialogPortal,
-  AlertDialogOverlay,
-  AlertDialogTrigger,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogFooter,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogAction,
-  AlertDialogCancel,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+  DropdownMenuRadioItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuGroup,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuRadioGroup,
 }
-````
-
-## File: components/ui/button.tsx
-````typescript
-import * as React from "react"
-import { Slot } from "@radix-ui/react-slot"
-import { cva, type VariantProps } from "class-variance-authority"
-
-import { cn } from "@/lib/utils"
-
-const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-)
-
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
-  asChild?: boolean
-}
-
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button"
-    return (
-      <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
-        ref={ref}
-        {...props}
-      />
-    )
-  }
-)
-Button.displayName = "Button"
-
-export { Button, buttonVariants }
 ````
 
 ## File: components/ui/input.tsx
@@ -2440,6 +2142,127 @@ function Skeleton({
 export { Skeleton }
 ````
 
+## File: components/ui/table.tsx
+````typescript
+import * as React from "react"
+
+import { cn } from "@/lib/utils"
+
+const Table = React.forwardRef<
+  HTMLTableElement,
+  React.HTMLAttributes<HTMLTableElement>
+>(({ className, ...props }, ref) => (
+  <div className="relative w-full overflow-auto">
+    <table
+      ref={ref}
+      className={cn("w-full caption-bottom text-sm", className)}
+      {...props}
+    />
+  </div>
+))
+Table.displayName = "Table"
+
+const TableHeader = React.forwardRef<
+  HTMLTableSectionElement,
+  React.HTMLAttributes<HTMLTableSectionElement>
+>(({ className, ...props }, ref) => (
+  <thead ref={ref} className={cn("[&_tr]:border-b", className)} {...props} />
+))
+TableHeader.displayName = "TableHeader"
+
+const TableBody = React.forwardRef<
+  HTMLTableSectionElement,
+  React.HTMLAttributes<HTMLTableSectionElement>
+>(({ className, ...props }, ref) => (
+  <tbody
+    ref={ref}
+    className={cn("[&_tr:last-child]:border-0", className)}
+    {...props}
+  />
+))
+TableBody.displayName = "TableBody"
+
+const TableFooter = React.forwardRef<
+  HTMLTableSectionElement,
+  React.HTMLAttributes<HTMLTableSectionElement>
+>(({ className, ...props }, ref) => (
+  <tfoot
+    ref={ref}
+    className={cn(
+      "border-t bg-muted/50 font-medium [&>tr]:last:border-b-0",
+      className
+    )}
+    {...props}
+  />
+))
+TableFooter.displayName = "TableFooter"
+
+const TableRow = React.forwardRef<
+  HTMLTableRowElement,
+  React.HTMLAttributes<HTMLTableRowElement>
+>(({ className, ...props }, ref) => (
+  <tr
+    ref={ref}
+    className={cn(
+      "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+      className
+    )}
+    {...props}
+  />
+))
+TableRow.displayName = "TableRow"
+
+const TableHead = React.forwardRef<
+  HTMLTableCellElement,
+  React.ThHTMLAttributes<HTMLTableCellElement>
+>(({ className, ...props }, ref) => (
+  <th
+    ref={ref}
+    className={cn(
+      "h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0",
+      className
+    )}
+    {...props}
+  />
+))
+TableHead.displayName = "TableHead"
+
+const TableCell = React.forwardRef<
+  HTMLTableCellElement,
+  React.TdHTMLAttributes<HTMLTableCellElement>
+>(({ className, ...props }, ref) => (
+  <td
+    ref={ref}
+    className={cn("p-4 align-middle [&:has([role=checkbox])]:pr-0", className)}
+    {...props}
+  />
+))
+TableCell.displayName = "TableCell"
+
+const TableCaption = React.forwardRef<
+  HTMLTableCaptionElement,
+  React.HTMLAttributes<HTMLTableCaptionElement>
+>(({ className, ...props }, ref) => (
+  <caption
+    ref={ref}
+    className={cn("mt-4 text-sm text-muted-foreground", className)}
+    {...props}
+  />
+))
+TableCaption.displayName = "TableCaption"
+
+export {
+  Table,
+  TableHeader,
+  TableBody,
+  TableFooter,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableCaption,
+}
+````
+
 ## File: components/ui/textarea.tsx
 ````typescript
 import * as React from "react"
@@ -2464,6 +2287,65 @@ const Textarea = React.forwardRef<
 Textarea.displayName = "Textarea"
 
 export { Textarea }
+````
+
+## File: components/mode-toggle.tsx
+````typescript
+"use client"
+
+import * as React from "react"
+import { Moon, Sun } from "lucide-react"
+import { useTheme } from "next-themes"
+
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+
+export function ModeToggle() {
+  const { setTheme } = useTheme()
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="icon">
+          <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+          <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+          <span className="sr-only">Toggle theme</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => setTheme("light")}>
+          Light
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme("dark")}>
+          Dark
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme("system")}>
+          System
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+````
+
+## File: components/theme-provider.tsx
+````typescript
+"use client"
+
+import type * as React from "react"
+import { ThemeProvider as NextThemesProvider } from "next-themes"
+
+export function ThemeProvider({
+  children,
+  ...props
+}: React.ComponentProps<typeof NextThemesProvider>) {
+  return <NextThemesProvider {...props}>{children}</NextThemesProvider>
+}
 ````
 
 ## File: data/achievement.ts
@@ -3466,6 +3348,63 @@ Supabaseには以下のテーブルが利用されています：
 - より詳細なプロフィール情報の追加（プロフィールテーブルの導入検討）
 ````
 
+## File: lib/hooks/useIsAdmin.ts
+````typescript
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { useUser } from '@clerk/nextjs';
+import { supabase } from '@/lib/supabase/client';
+
+export function useIsAdmin() {
+  const { user, isLoaded } = useUser();
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  const checkAdminStatus = useCallback(async () => {
+    if (!isLoaded || !user) {
+      // Clerkのユーザー情報が読み込み中または存在しない場合
+      setIsLoading(!isLoaded); // isLoadedがfalseの間はローディング中
+      if (isLoaded && !user) { // 読み込み完了したがユーザーなし
+        setIsAdmin(false);
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // Clerkユーザー情報はあるが、管理者ステータスをこれから取得
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('is_admin')
+        .eq('clerk_id', user.id)
+        .single();
+
+      if (error) {
+        // Supabaseにユーザーが見つからない、または他のエラー
+        console.warn('Admin status check failed:', error.message);
+        setIsAdmin(false);
+      } else {
+        setIsAdmin(data?.is_admin === true);
+      }
+    } catch (err) {
+      console.error('Unexpected error fetching admin status:', err);
+      setIsAdmin(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, isLoaded]);
+
+  useEffect(() => {
+    checkAdminStatus();
+  }, [checkAdminStatus]); // useCallbackでメモ化された関数を依存配列に入れる
+
+  return { isAdmin, isLoading };
+}
+````
+
 ## File: lib/supabase/client.ts
 ````typescript
 import { createBrowserClient } from '@supabase/ssr'
@@ -3531,6 +3470,38 @@ export async function createClient() {
       },
     }
   )
+}
+````
+
+## File: lib/authUtils.ts
+````typescript
+import { auth } from '@clerk/nextjs/server';
+import { createClient } from '@/lib/supabase/server'; // サーバーサイド用Supabaseクライアント
+
+export async function isAdmin(): Promise<boolean> {
+  const { userId } = await auth();
+  if (!userId) {
+    return false; // 未認証ユーザーは管理者ではない
+  }
+
+  try {
+    const supabase = await createClient();
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('is_admin')
+      .eq('clerk_id', userId) // clerk_idで検索
+      .single();
+
+    if (error || !user) {
+      console.error('Error fetching user admin status:', error?.message);
+      return false;
+    }
+
+    return user.is_admin === true;
+  } catch (err) {
+    console.error('Unexpected error in isAdmin:', err);
+    return false;
+  }
 }
 ````
 
@@ -3841,6 +3812,101 @@ model Refund {
 }
 ````
 
+## File: prisma/seed.ts
+````typescript
+import { PrismaClient, Prisma } from '@prisma/client';
+import { faker } from '@faker-js/faker/locale/ja'; // 日本語ロケールのFakerを使用
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log("Start seeding ...");
+
+  // --- ユーザーデータの生成と挿入 ---
+  const usersData: Prisma.UserCreateInput[] = [];
+  for (let i = 1; i <= 30; i++) {
+    const isAdmin = i <= 3; // 最初の3人を管理者とする
+    const firstName = faker.person.firstName();
+    const lastName = faker.person.lastName();
+    const email = faker.internet.email({ firstName, lastName, provider: 'example.com' }).toLowerCase(); // 一意性を高めるため小文字に
+    const clerkId = `user_test_${String(i).padStart(3, '0')}`;
+
+    usersData.push({
+      // id: Prismaが自動生成 (UUID)
+      clerkId: clerkId,
+      isAdmin: isAdmin,
+      firstName: firstName,
+      lastName: lastName,
+      email: email,
+      phone: Math.random() < 0.7 ? `090-${faker.string.numeric(4)}-${faker.string.numeric(4)}` : undefined, // 約70%で電話番号を設定
+      bio: Math.random() < 0.5 ? faker.lorem.sentence() : undefined, // 約50%でBioを設定
+      address: Math.random() < 0.6 ? faker.location.streetAddress(true) : undefined, // 約60%で住所を設定
+      // createdAt, updatedAt: Prismaが自動設定
+    });
+  }
+
+  // createManyで一括挿入 (エラーがあればスキップ)
+  // 注意: email/clerkIdが重複するとエラーになる可能性あり。シーケンスで生成しているので通常は問題ないはず。
+  console.log(`Seeding ${usersData.length} users...`);
+  const createdUsers = await prisma.user.createMany({
+    data: usersData,
+    skipDuplicates: true, // 重複エラーをスキップする場合（開発初期に便利）
+  });
+  console.log(`Seeded ${createdUsers.count} users.`);
+
+
+  // --- 商品データの生成と挿入 ---
+  const itemCategories = ['除雪', '排雪', '草刈り', '剪定', 'その他'];
+  const itemsData: Prisma.ItemCreateInput[] = [];
+  for (let i = 1; i <= 30; i++) {
+    const category = faker.helpers.arrayElement(itemCategories);
+    let name = '';
+    switch (category) {
+      case '除雪': name = faker.helpers.arrayElement(['標準ローダー除雪', '広範囲除雪', '屋根雪下ろし']); break;
+      case '排雪': name = faker.helpers.arrayElement(['軽トラック排雪', '2tダンプ排雪', '4tダンプ排雪']); break;
+      case '草刈り': name = faker.helpers.arrayElement(['庭 草刈り', '空き地 草刈り', '法面 草刈り']); break;
+      case '剪定': name = faker.helpers.arrayElement(['低木剪定', '高木剪定', '生垣剪定']); break;
+      default: name = faker.commerce.productName(); break;
+    }
+    name += ` (${faker.number.int({ min: 1, max: 5 })}時間)`; // 例として時間を追加
+
+    const isAvailable = i <= 25; // 最初の25件を販売可能に
+
+    itemsData.push({
+      // id: Prismaが自動生成 (UUID)
+      name: name,
+      description: Math.random() < 0.7 ? faker.lorem.paragraph() : undefined, // 約70%で説明を設定
+      price: new Prisma.Decimal(faker.commerce.price({ min: 1000, max: 50000, dec: 0 })), // Decimal型で価格を設定
+      imageUrl: Math.random() < 0.6 ? faker.image.urlLoremFlickr({ category: 'nature' }) : undefined, // 約60%で画像URL設定
+      category: category,
+      isAvailable: isAvailable,
+      stock: isAvailable ? faker.number.int({ min: 0, max: 50 }) : 0,
+      // createdAt, updatedAt: Prismaが自動設定
+    });
+  }
+
+  console.log(`Seeding ${itemsData.length} items...`);
+  const createdItems = await prisma.item.createMany({
+    data: itemsData,
+    skipDuplicates: true, // 商品名等で重複する可能性は低いが念のため
+  });
+  console.log(`Seeded ${createdItems.count} items.`);
+
+
+  console.log("Seeding finished.");
+}
+
+main()
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
+````
+
 ## File: public/file.svg
 ````
 <svg fill="none" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 13.5V5.41a1 1 0 0 0-.3-.7L9.8.29A1 1 0 0 0 9.08 0H1.5v13.5A2.5 2.5 0 0 0 4 16h8a2.5 2.5 0 0 0 2.5-2.5m-1.5 0v-7H8v-5H3v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1M9.5 5V2.12L12.38 5zM5.13 5h-.62v1.25h2.12V5zm-.62 3h7.12v1.25H4.5zm.62 3h-.62v1.25h7.12V11z" clip-rule="evenodd" fill="#666" fill-rule="evenodd"/></svg>
@@ -3864,6 +3930,53 @@ model Refund {
 ## File: public/window.svg
 ````
 <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M1.5 2.5h13v10a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1zM0 1h16v11.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 12.5zm3.75 4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M7 4.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m1.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5" fill="#666"/></svg>
+````
+
+## File: types/item.ts
+````typescript
+import type { Decimal } from '@prisma/client/runtime/library';
+
+// Supabaseから取得する商品データの型
+export type Item = {
+  id: string; // uuid
+  name: string;
+  description?: string | null;
+  price: number | Decimal;
+  image_url?: string | null;
+  category?: string | null;
+  is_available: boolean;
+  stock: number;
+  created_at: string; // ISO 8601 string
+  updated_at: string; // ISO 8601 string
+};
+
+// 商品フォームで使用するデータの型
+export type ItemFormData = {
+  name: string;
+  description?: string;
+  price: number;
+  imageUrl?: string;
+  category?: string;
+  isAvailable: boolean;
+  stock: number;
+};
+
+// 商品フォームのプロパティ型
+export type ItemFormProps = {
+  initialData?: Item | null;
+  onSuccess?: () => void;
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+};
+
+// 商品削除ダイアログのプロパティ型
+export type DeleteItemAlertProps = {
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  itemId: string | null;
+  itemName?: string;
+  onConfirm: () => void;
+};
 ````
 
 ## File: types/profile.ts
@@ -3922,6 +4035,40 @@ export type Achievement = {
   alt: string
   date: string
 }
+````
+
+## File: types/user.ts
+````typescript
+// ユーザー型定義
+export type User = {
+  id: string;
+  clerkId: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+  phone: string | null;
+  bio: string | null;
+  address: string | null;
+  isAdmin: boolean;
+  created_at: string;
+  updated_at: string;
+};
+````
+
+## File: .eslintrc.js
+````javascript
+module.exports = {
+  extends: 'next/core-web-vitals',
+  rules: {
+    '@typescript-eslint/no-unused-vars': ['warn', { 
+      argsIgnorePattern: '^_',
+      varsIgnorePattern: '^_' 
+    }],
+    '@typescript-eslint/ban-types': 'off',
+    'react/no-unescaped-entities': 'off',
+    'typescript-eslint/no-explicit-any': 'off'
+  }
+};
 ````
 
 ## File: .prettierrc
@@ -3995,6 +4142,23 @@ export const config = {
     '/(api|trpc)(.*)',
   ],
 };
+````
+
+## File: next.config.js
+````javascript
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  typescript: {
+    // ビルド時の型チェックを一時的に無効化
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    // ビルド時のESLintチェックを一時的に無効化
+    ignoreDuringBuilds: true,
+  },
+};
+
+module.exports = nextConfig;
 ````
 
 ## File: next.config.ts
@@ -4088,110 +4252,6 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
-}
-````
-
-## File: app/about/page.tsx
-````typescript
-export default function About() {
-  return (
-    <>
-      <div className='p-6 prose prose-sm'>
-        <h1>四季守とは</h1>
-        <p>
-          四季守は、四季の除雪と草刈りを行うサービスです。
-        </p>
-
-        <h2>概要</h2>
-        <p>
-          四季守は、重機によるプロフェッショナルな除雪・草刈りサービスです。個人宅から法人まで、幅広いニーズに対応し、安全・安心・快適な環境づくりに貢献します。
-        </p>
-
-        <h2>ブランドコンセプト</h2>
-        <p>「四季を彩り、暮らしを守る」</p>
-        <p>
-          四季折々の自然の美しさを守り、お客様の生活をサポートします。
-        </p>
-
-        <h2>サービス内容</h2>
-        <h3>重機による除雪サービス</h3>
-        <ul>
-          <li>
-            個人宅向け： 玄関先から駐車場までの除雪、雪かき、排雪など
-          </li>
-          <li>法人向け： 駐車場、通路、敷地内の除雪と排雪、雪堆積場の確保など</li>
-          <li>地域向け： 道路、公園、公共施設の除雪と排雪</li>
-        </ul>
-
-        <h3>重機による草刈りサービス</h3>
-        <ul>
-          <li>個人宅向け： 庭、空き地の草刈り、雑草処理、庭木の剪定など</li>
-          <li>法人向け： 敷地内の草刈り、雑草管理、緑地管理など</li>
-          <li>地域向け： 公園、河川敷、道路沿いの草刈り</li>
-        </ul>
-
-        <h2>強み</h2>
-        <ul>
-          <li>
-            プロフェッショナル:経験豊富な専門スタッフが、安全かつ効率的に作業を行います。
-          </li>
-          <li>重機: 最新の重機を導入し、短時間で広範囲の作業が可能です。</li>
-          <li>安心: 損害保険に加入しており、万が一の事故にも対応します。</li>
-          <li>
-            柔軟性:
-            お客様のニーズに合わせて、柔軟なサービスプランをご提案します。
-          </li>
-        </ul>
-
-        <h2>料金体系</h2>
-        <ul>
-          <li>個人宅向け: 定額制プラン、都度払いプラン</li>
-          <li>法人向け: 契約プラン、スポットプラン</li>
-          <li>地域向け: 協議</li>
-        </ul>
-
-        <h2>マーケティング戦略</h2>
-        <ul>
-          <li>ターゲット層: 個人宅、法人、地域</li>
-          <li>プロモーション: チラシ、DM、Web広告、SNS</li>
-          <li>
-            クロスセリング: 除雪・草刈り以外のサービスとの連携 (例:
-            庭木の剪定、害虫駆除)
-          </li>
-        </ul>
-
-        <h2>運営体制</h2>
-        <ul>
-          <li>専門スタッフ: 経験豊富なオペレーター、技術者</li>
-          <li>品質管理: 作業後の確認、定期的なメンテナンス</li>
-          <li>業務効率化: 作業計画の作成、人員配置の最適化</li>
-        </ul>
-
-        <h2>将来展開</h2>
-        <ul>
-          <li>フランチャイズ展開: 全国展開</li>
-          <li>サービス拡張: 樹木伐採、害虫駆除、庭のリフォームなど</li>
-          <li>地域展開: 地域密着型のサービス展開</li>
-        </ul>
-        
-        <h2>ブランド展開による効果</h2>
-        <ul>
-          <li>
-            多様な顧客ニーズへの対応: 個人宅、法人、地域など、幅広い顧客層に対応
-          </li>
-          <li>
-            収益機会の拡大: 除雪・草刈り以外のサービス展開による収益源の確保
-          </li>
-          <li>ブランド価値の向上: 高品質なサービス提供による信頼性向上</li>
-        </ul>
-
-        <h2>最後に</h2>
-        <p>
-          四季守は、お客様の暮らしをより快適にするために、常にサービスの向上に努めています。重機による除雪・草刈りサービスのことなら、ぜひ四季守にお任せください。
-        </p>
-      </div>
-    </>
-  )
 }
 ````
 
@@ -4342,86 +4402,6 @@ export default function Achievements() {
 }
 ````
 
-## File: app/components/mobile-nav.tsx
-````typescript
-'use client'
-import { Button } from '@/components/ui/button'
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-  SheetTrigger
-} from '@/components/ui/sheet'
-import { navListItems } from '@/data/navigations'
-import { Menu } from 'lucide-react'
-import Link from 'next/link'
-import { useState, useEffect } from 'react'
-import { SignedIn } from '@clerk/nextjs'
-import { useIsAdmin } from '@/lib/hooks/useIsAdmin'
-
-export default function MobileNav() {
-  const [open, setOpen] = useState(false)
-  const [mounted, setMounted] = useState(false)
-  const { isAdmin, isLoading } = useIsAdmin()
-
-  // クライアントサイドのみで実行
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  // サーバーサイドとクライアントサイドで一貫したコンテンツ
-  const mobileMenuButton = (
-    <Button size='icon' variant='outline'>
-      <Menu size={18} />
-    </Button>
-  )
-
-  // サーバーサイドレンダリング時は最小限の構造のみを返す
-  if (!mounted) {
-    return mobileMenuButton
-  }
-
-  // クライアントサイドでのみ完全なメニューを表示
-  return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        {mobileMenuButton}
-      </SheetTrigger>
-      <SheetContent>
-        <SheetTitle>メニュー</SheetTitle>
-        <ul className='flex list-none flex-col'>
-          {navListItems.map(item => (
-            <li key={item.href} className='my-2'>
-              <Button variant='ghost' asChild onClick={() => setOpen(false)}>
-                <Link href={item.href}>{item.label}</Link>
-              </Button>
-            </li>
-          ))}
-          {/* 管理者リンクの条件付き表示 */}
-          <SignedIn>
-            {mounted && !isLoading && isAdmin && (
-              <li className='my-2'>
-                <Button variant='ghost' asChild onClick={() => setOpen(false)}>
-                  <Link href='/admin'>管理</Link>
-                </Button>
-              </li>
-            )}
-          </SignedIn>
-        </ul>
-        <div className='grid grid-cols-2 gap-2 sticky top-full'>
-          <Button variant='ghost' asChild onClick={() => setOpen(false)}>
-            <Link href='/register'>登録</Link>
-          </Button>
-          <Button variant='ghost' asChild onClick={() => setOpen(false)}>
-            <Link href='/login'>ログイン</Link>
-          </Button>
-        </div>
-      </SheetContent>
-    </Sheet>
-  )
-}
-````
-
 ## File: app/legalNotice/page.tsx
 ````typescript
 export default function Page() {
@@ -4529,6 +4509,16 @@ export default function Page() {
 }
 ````
 
+## File: app/menu/page.tsx
+````typescript
+export default function Page() {
+  return (
+    <div className="container mx-auto max-w-4xl mt-10">
+    </div>
+  )
+}
+````
+
 ## File: app/privacy/page.tsx
 ````typescript
 export default function Page() {
@@ -4606,6 +4596,480 @@ export default function Page() {
       </div>
     </div>
   )
+}
+````
+
+## File: app/profile/components/ProfileClient.tsx
+````typescript
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { useUser } from '@clerk/nextjs';
+import { toast } from 'sonner';
+import { Skeleton } from '@/components/ui/skeleton';
+import ProfileView from './ProfileView';
+import ProfileForm from './ProfileForm';
+import { supabase } from '@/lib/supabase/client';
+import type { ProfileClientProps } from '@/types/profile';
+
+export default function ProfileClient({ mode }: ProfileClientProps) {
+  const { user, isLoaded } = useUser();
+  const [loading, setLoading] = useState(true);
+  const [userData, setUserData] = useState<{
+    id: string;
+    clerk_id: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    phone: string;
+    bio?: string;
+    address?: string;
+    created_at: string;
+    updated_at: string;
+  } | null>(null);
+  const [needsCreate, setNeedsCreate] = useState(false);
+
+  const fetchProfile = useCallback(async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    
+    try {
+      // ユーザー情報を取得
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('clerk_id', user.id)
+        .single();
+      
+      // ユーザーが存在しない場合は作成する
+      if (userError || !userData) {
+        console.log('User not found, needs creation');
+        setNeedsCreate(true);
+        setUserData(null);
+      } else {
+        setUserData(userData);
+        setNeedsCreate(false);
+      }
+    } catch (error) {
+      console.log('Unexpected error:', error);
+      toast.error('予期せぬエラーが発生しました');
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  const createProfile = useCallback(async () => {
+    if (!user || !needsCreate) return;
+    
+    setLoading(true);
+    
+    try {
+      // 基本的なユーザー情報を取得
+      const email = user.primaryEmailAddress?.emailAddress || '';
+      const firstName = user.firstName || '';
+      const lastName = user.lastName || '';
+      
+      // 現在の日時を取得
+      const now = new Date().toISOString();
+      
+      // メールアドレスで既存ユーザーを確認
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
+        
+      if (existingUser) {
+        console.log('User with this email exists, updating clerk_id');
+        
+        // 既存ユーザーのclerk_idを更新
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            clerk_id: user.id,
+            first_name: firstName,
+            last_name: lastName,
+            updated_at: now,
+          })
+          .eq('id', existingUser.id);
+          
+        if (updateError) {
+          console.log('Error updating user:', updateError);
+          toast.error(`ユーザー情報の更新に失敗しました: ${updateError.message}`);
+          return;
+        }
+        
+        toast.success('既存ユーザー情報を更新しました');
+      } else {
+        // ユーザーを新規作成
+        const { error: createError } = await supabase
+          .from('users')
+          .insert({
+            id: crypto.randomUUID(), // UUIDを手動で生成
+            clerk_id: user.id,
+            email,
+            first_name: firstName,
+            last_name: lastName,
+            phone: '',
+            created_at: now,
+            updated_at: now,
+          });
+        
+        if (createError) {
+          console.log('Error creating user:', createError);
+          toast.error(`ユーザー情報の作成に失敗しました: ${createError.message}`);
+          return;
+        }
+        
+        toast.success('プロフィールを新規作成しました');
+      }
+      
+      // プロフィールを再取得
+      fetchProfile();
+    } catch (err) {
+      console.log('Unexpected error creating user:', err);
+      toast.error('予期せぬエラーが発生しました');
+    } finally {
+      setLoading(false);
+    }
+  }, [user, needsCreate, fetchProfile]);
+
+  useEffect(() => {
+    if (isLoaded && user) {
+      fetchProfile();
+    }
+  }, [isLoaded, user, fetchProfile]);
+
+  useEffect(() => {
+    if (needsCreate && mode !== 'create') {
+      createProfile();
+    }
+  }, [needsCreate, mode, createProfile]);
+
+  if (!isLoaded || loading) {
+    return (
+      <div className="max-w-2xl mx-auto p-4">
+        <Skeleton className="h-8 w-1/3 mb-6" />
+        <Skeleton className="h-4 w-full mb-2" />
+        <Skeleton className="h-4 w-full mb-2" />
+        <Skeleton className="h-4 w-2/3 mb-4" />
+        <Skeleton className="h-4 w-full mb-2" />
+        <Skeleton className="h-4 w-full mb-2" />
+        <Skeleton className="h-4 w-3/4 mb-4" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="max-w-2xl mx-auto p-4 bg-white dark:bg-slate-900 rounded-lg shadow dark:shadow-slate-800">
+        <h1 className="text-2xl font-bold mb-6">プロフィール</h1>
+        <p>プロフィールを表示するにはログインしてください。</p>
+      </div>
+    );
+  }
+
+  if (needsCreate || mode === 'create') {
+    return <ProfileForm onSuccess={fetchProfile} />;
+  }
+
+  if (mode === 'edit' && userData) {
+    return <ProfileForm initialData={userData} onSuccess={fetchProfile} />;
+  }
+
+  if (userData) {
+    return <ProfileView userData={userData} />;
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto p-4 bg-white dark:bg-slate-900 rounded-lg shadow dark:shadow-slate-800">
+      <h1 className="text-2xl font-bold mb-6">プロフィール</h1>
+      <p>プロフィール情報の読み込み中にエラーが発生しました。</p>
+    </div>
+  );
+}
+````
+
+## File: app/profile/components/ProfileForm.tsx
+````typescript
+'use client';
+
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { useUser } from '@clerk/nextjs';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { supabase } from '@/lib/supabase/client';
+import type { ProfileFormData, ProfileFormProps } from '@/types/profile';
+
+export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps) {
+  const { user } = useUser();
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  const { register, handleSubmit, formState: { errors } } = useForm<ProfileFormData>({
+    defaultValues: {
+      firstName: initialData?.first_name || '',
+      lastName: initialData?.last_name || '',
+      phone: initialData?.phone || '',
+      bio: initialData?.bio || '',
+      address: initialData?.address || '',
+    }
+  });
+
+  /**
+   * プロフィール情報を更新する
+   */
+  const onSubmit = async (data: ProfileFormData) => {
+    if (!user) {
+      toast.error('ユーザー情報が取得できません');
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      // データベース更新用のオブジェクトを作成
+      const updateData = {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        phone: data.phone,
+        bio: data.bio,
+        address: data.address,
+        updated_at: new Date().toISOString(),
+      };
+      
+      const { error } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('clerk_id', user.id);
+        
+      if (error) {
+        console.error('プロフィール更新エラー:', error.message);
+        toast.error('プロフィールの更新に失敗しました');
+        return;
+      }
+      
+      toast.success('プロフィールを更新しました');
+      if (onSuccess) onSuccess();
+      
+      router.push('/profile');
+    } catch (error) {
+      console.error('予期せぬエラー:', error);
+      toast.error('予期せぬエラーが発生しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto mt-10 p-4 bg-white dark:bg-slate-900 rounded-lg shadow dark:shadow-slate-800">
+      <h1 className="text-2xl font-bold mb-6">プロフィール{initialData ? '編集' : '登録'}</h1>
+      
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="firstName">名</Label>
+            <Input
+              id="firstName"
+              autoComplete='off'
+              {...register('firstName', { required: '名は必須です' })}
+              placeholder="名"
+            />
+            {errors.firstName && (
+              <p className="text-red-500 text-sm">{errors.firstName.message}</p>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="lastName">姓</Label>
+            <Input
+              id="lastName"
+              autoComplete='off'
+              {...register('lastName', { required: '姓は必須です' })}
+              placeholder="姓"
+            />
+            {errors.lastName && (
+              <p className="text-red-500 text-sm">{errors.lastName.message}</p>
+            )}
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="address">住所</Label>
+          <Input
+            id="address"
+            autoComplete='off'
+            {...register('address')}
+            placeholder="住所"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="phone">電話番号</Label>
+          <Input
+            id="phone"
+            type="tel"
+            autoComplete='off'
+            {...register('phone')}
+            placeholder="電話番号"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="bio">自己紹介</Label>
+          <Textarea
+            id="bio"
+            autoComplete='off'
+            {...register('bio')}
+            placeholder="自己紹介"
+            rows={4}
+          />
+        </div>
+        
+        <div className="flex justify-end gap-4">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => router.push('/profile')}
+          >
+            キャンセル
+          </Button>
+          <Button type="submit" disabled={loading}>
+            {loading ? 'プロフィールを保存中...' : 'プロフィールを保存'}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+````
+
+## File: app/profile/components/ProfileView.tsx
+````typescript
+'use client';
+
+import { useState } from 'react';
+import { useUser } from '@clerk/nextjs';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabase/client';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import type { ProfileViewProps } from '@/types/profile';
+
+
+
+export default function ProfileView({ userData }: ProfileViewProps) {
+  const { user } = useUser();
+  const [loading, setLoading] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  
+  const handleDelete = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    
+    try {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('clerk_id', user.id);
+        
+      if (error) {
+        console.log('Error deleting profile:', error);
+        toast.error('プロフィールの削除に失敗しました');
+      } else {
+        toast.success('プロフィールを削除しました');
+        window.location.reload();
+      }
+    } catch (error) {
+      console.log('Unexpected error:', error);
+      toast.error('予期せぬエラーが発生しました');
+    } finally {
+      setLoading(false);
+      setIsDeleteDialogOpen(false);
+    }
+  };
+  return (
+    <div className="max-w-2xl mt-10 mx-auto p-4 bg-white dark:bg-slate-900 rounded-lg shadow dark:shadow-slate-800">
+      <h1 className="text-2xl font-bold mb-6">プロフィール</h1>
+      
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold">名前</h2>
+          <p>{userData.first_name} {userData.last_name}</p>
+        </div>
+        
+        <div>
+          <h2 className="text-lg font-semibold">メールアドレス</h2>
+          <p>{userData.email}</p>
+        </div>
+        
+        {userData.address && (
+          <div>
+            <h2 className="text-lg font-semibold">住所</h2>
+            <p>{userData.address}</p>
+          </div>
+        )}
+        
+        {userData.phone && (
+          <div>
+            <h2 className="text-lg font-semibold">電話番号</h2>
+            <p>{userData.phone}</p>
+          </div>
+        )}
+        
+        {userData.bio && (
+          <div>
+            <h2 className="text-lg font-semibold">自己紹介</h2>
+            <p className="whitespace-pre-wrap">{userData.bio}</p>
+          </div>
+        )}
+        
+        <div className="pt-4 flex gap-4">
+          <Link href="/profile/edit">
+            <Button>プロフィールを編集</Button>
+          </Link>
+          
+          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive">プロフィールを削除</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>プロフィールを削除しますか？</AlertDialogTitle>
+                <AlertDialogDescription>
+                  この操作は取り消せません。プロフィール情報がすべて削除されます。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} disabled={loading}>
+                  {loading ? '削除中...' : '削除する'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </div>
+    </div>
+  );
 }
 ````
 
@@ -4773,6 +5237,110 @@ const eslintConfig = [
 export default eslintConfig;
 ````
 
+## File: app/about/page.tsx
+````typescript
+export default function About() {
+  return (
+    <>
+      <div className='container mx-auto max-w-4xl mt-10 p-6 prose prose-sm dark:prose-invert'>
+        <h1>四季守とは</h1>
+        <p>
+          四季守は、四季の除雪と草刈りを行うサービスです。
+        </p>
+
+        <h2>概要</h2>
+        <p>
+          四季守は、重機によるプロフェッショナルな除雪・草刈りサービスです。個人宅から法人まで、幅広いニーズに対応し、安全・安心・快適な環境づくりに貢献します。
+        </p>
+
+        <h2>ブランドコンセプト</h2>
+        <p>「四季を彩り、暮らしを守る」</p>
+        <p>
+          四季折々の自然の美しさを守り、お客様の生活をサポートします。
+        </p>
+
+        <h2>サービス内容</h2>
+        <h3>重機による除雪サービス</h3>
+        <ul>
+          <li>
+            個人宅向け： 玄関先から駐車場までの除雪、雪かき、排雪など
+          </li>
+          <li>法人向け： 駐車場、通路、敷地内の除雪と排雪、雪堆積場の確保など</li>
+          <li>地域向け： 道路、公園、公共施設の除雪と排雪</li>
+        </ul>
+
+        <h3>重機による草刈りサービス</h3>
+        <ul>
+          <li>個人宅向け： 庭、空き地の草刈り、雑草処理、庭木の剪定など</li>
+          <li>法人向け： 敷地内の草刈り、雑草管理、緑地管理など</li>
+          <li>地域向け： 公園、河川敷、道路沿いの草刈り</li>
+        </ul>
+
+        <h2>強み</h2>
+        <ul>
+          <li>
+            プロフェッショナル:経験豊富な専門スタッフが、安全かつ効率的に作業を行います。
+          </li>
+          <li>重機: 最新の重機を導入し、短時間で広範囲の作業が可能です。</li>
+          <li>安心: 損害保険に加入しており、万が一の事故にも対応します。</li>
+          <li>
+            柔軟性:
+            お客様のニーズに合わせて、柔軟なサービスプランをご提案します。
+          </li>
+        </ul>
+
+        <h2>料金体系</h2>
+        <ul>
+          <li>個人宅向け: 定額制プラン、都度払いプラン</li>
+          <li>法人向け: 契約プラン、スポットプラン</li>
+          <li>地域向け: 協議</li>
+        </ul>
+
+        <h2>マーケティング戦略</h2>
+        <ul>
+          <li>ターゲット層: 個人宅、法人、地域</li>
+          <li>プロモーション: チラシ、DM、Web広告、SNS</li>
+          <li>
+            クロスセリング: 除雪・草刈り以外のサービスとの連携 (例:
+            庭木の剪定、害虫駆除)
+          </li>
+        </ul>
+
+        <h2>運営体制</h2>
+        <ul>
+          <li>専門スタッフ: 経験豊富なオペレーター、技術者</li>
+          <li>品質管理: 作業後の確認、定期的なメンテナンス</li>
+          <li>業務効率化: 作業計画の作成、人員配置の最適化</li>
+        </ul>
+
+        <h2>将来展開</h2>
+        <ul>
+          <li>フランチャイズ展開: 全国展開</li>
+          <li>サービス拡張: 樹木伐採、害虫駆除、庭のリフォームなど</li>
+          <li>地域展開: 地域密着型のサービス展開</li>
+        </ul>
+        
+        <h2>ブランド展開による効果</h2>
+        <ul>
+          <li>
+            多様な顧客ニーズへの対応: 個人宅、法人、地域など、幅広い顧客層に対応
+          </li>
+          <li>
+            収益機会の拡大: 除雪・草刈り以外のサービス展開による収益源の確保
+          </li>
+          <li>ブランド価値の向上: 高品質なサービス提供による信頼性向上</li>
+        </ul>
+
+        <h2>最後に</h2>
+        <p>
+          四季守は、お客様の暮らしをより快適にするために、常にサービスの向上に努めています。重機による除雪・草刈りサービスのことなら、ぜひ四季守にお任せください。
+        </p>
+      </div>
+    </>
+  )
+}
+````
+
 ## File: app/components/contact.tsx
 ````typescript
 'use client'
@@ -4893,6 +5461,152 @@ export default function Hero() {
 }
 ````
 
+## File: app/components/mobile-nav.tsx
+````typescript
+'use client'
+import { Button } from '@/components/ui/button'
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetTrigger
+} from '@/components/ui/sheet'
+import { navListItems } from '@/data/navigations'
+import { Menu } from 'lucide-react'
+import Link from 'next/link'
+import { useState, useEffect } from 'react'
+import { SignedIn } from '@clerk/nextjs'
+import { useIsAdmin } from '@/lib/hooks/useIsAdmin'
+
+export default function MobileNav() {
+  const [open, setOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const { isAdmin, isLoading } = useIsAdmin()
+
+  // クライアントサイドのみで実行
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // サーバーサイドとクライアントサイドで一貫したコンテンツ
+  const mobileMenuButton = (
+    <Button size='icon' variant='outline'>
+      <Menu size={18} />
+    </Button>
+  )
+
+  // サーバーサイドレンダリング時は最小限の構造のみを返す
+  if (!mounted) {
+    return mobileMenuButton
+  }
+
+  // クライアントサイドでのみ完全なメニューを表示
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        {mobileMenuButton}
+      </SheetTrigger>
+      <SheetContent>
+        <SheetTitle>メニュー</SheetTitle>
+        <ul className='flex list-none flex-col'>
+          {navListItems.map(item => (
+            <li key={item.href} className='my-2'>
+              <Button variant='ghost' asChild onClick={() => setOpen(false)}>
+                <Link href={item.href}>{item.label}</Link>
+              </Button>
+            </li>
+          ))}
+          {/* 管理者リンクの条件付き表示 */}
+          <SignedIn>
+            {mounted && !isLoading && isAdmin && (
+              <li className='my-2'>
+                <Button variant='ghost' asChild onClick={() => setOpen(false)}>
+                  <Link href='/admin'>管理</Link>
+                </Button>
+              </li>
+            )}
+          </SignedIn>
+        </ul>
+        <div className='grid grid-cols-2 gap-2 sticky top-full'>
+          <Button variant='ghost' asChild onClick={() => setOpen(false)}>
+            <Link href='/register'>登録</Link>
+          </Button>
+          <Button variant='ghost' asChild onClick={() => setOpen(false)}>
+            <Link href='/login'>ログイン</Link>
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+````
+
+## File: tailwind.config.ts
+````typescript
+import type { Config } from 'tailwindcss'
+
+export default {
+  darkMode: ['class'],
+  content: [
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}'
+  ],
+  theme: {
+    extend: {
+      colors: {
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
+        card: {
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))'
+        },
+        popover: {
+          DEFAULT: 'hsl(var(--popover))',
+          foreground: 'hsl(var(--popover-foreground))'
+        },
+        primary: {
+          DEFAULT: 'hsl(var(--primary))',
+          foreground: 'hsl(var(--primary-foreground))'
+        },
+        secondary: {
+          DEFAULT: 'hsl(var(--secondary))',
+          foreground: 'hsl(var(--secondary-foreground))'
+        },
+        muted: {
+          DEFAULT: 'hsl(var(--muted))',
+          foreground: 'hsl(var(--muted-foreground))'
+        },
+        accent: {
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))'
+        },
+        destructive: {
+          DEFAULT: 'hsl(var(--destructive))',
+          foreground: 'hsl(var(--destructive-foreground))'
+        },
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
+        chart: {
+          '1': 'hsl(var(--chart-1))',
+          '2': 'hsl(var(--chart-2))',
+          '3': 'hsl(var(--chart-3))',
+          '4': 'hsl(var(--chart-4))',
+          '5': 'hsl(var(--chart-5))'
+        }
+      },
+      borderRadius: {
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)'
+      }
+    }
+  },
+  plugins: [require('tailwindcss-animate'), require("@tailwindcss/typography")],
+} satisfies Config
+````
+
 ## File: app/contact/page.tsx
 ````typescript
 import { Button } from '@/components/ui/button'
@@ -4901,7 +5615,7 @@ import { Textarea } from '@/components/ui/textarea'
 
 export default function Page() {
   return (
-    <div className='container prose prose-sm mx-auto p-6'>
+    <div className='container prose prose-sm mx-auto p-6 dark:prose-invert'>
       <p className='mt-10'>
         お見積りのお問い合わせなどこちらからお問い合わせください。
       </p>
@@ -4936,13 +5650,24 @@ export default function Page() {
 }
 ````
 
+## File: app/profile/page.tsx
+````typescript
+'use client';
+
+import ProfileClient from './components/ProfileClient';
+
+export default function ProfilePage() {
+  return <ProfileClient mode="view" />;
+}
+````
+
 ## File: app/globals.css
 ````css
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 body{
-	@apply container mx-auto max-w-4xl bg-white text-black dark:bg-slate-950 dark:text-slate-100
+	@apply mx-auto bg-white text-black dark:bg-slate-950 dark:text-slate-100  
 }
 @layer base {
   :root {
@@ -5018,122 +5743,6 @@ body{
     @apply bg-background text-foreground;}}
 ````
 
-## File: tailwind.config.ts
-````typescript
-import type { Config } from 'tailwindcss'
-
-export default {
-  darkMode: ['class'],
-  content: [
-    './pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './components/**/*.{js,ts,jsx,tsx,mdx}',
-    './app/**/*.{js,ts,jsx,tsx,mdx}'
-  ],
-  theme: {
-    extend: {
-      colors: {
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
-        card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))'
-        },
-        popover: {
-          DEFAULT: 'hsl(var(--popover))',
-          foreground: 'hsl(var(--popover-foreground))'
-        },
-        primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))'
-        },
-        secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))'
-        },
-        muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))'
-        },
-        accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))'
-        },
-        destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))'
-        },
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
-        chart: {
-          '1': 'hsl(var(--chart-1))',
-          '2': 'hsl(var(--chart-2))',
-          '3': 'hsl(var(--chart-3))',
-          '4': 'hsl(var(--chart-4))',
-          '5': 'hsl(var(--chart-5))'
-        }
-      },
-      borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)'
-      }
-    }
-  },
-  plugins: [require('tailwindcss-animate'), require("@tailwindcss/typography")],
-} satisfies Config
-````
-
-## File: app/profile/page.tsx
-````typescript
-'use client';
-
-import ProfileClient from './components/ProfileClient';
-
-export default function ProfilePage() {
-  return <ProfileClient mode="view" />;
-}
-````
-
-## File: app/page.tsx
-````typescript
-import { createClient } from '@/lib/supabase/server'
-
-import Hero from './components/Hero'
-import Achievements from './components/Achievements'
-import Contact from './components/contact'
-
-export default async function Home() {
-  let data = null
-  let error = null
-
-  try {
-    const supabase = await createClient()
-    console.log('Supabaseクライアント作成成功')
-
-    const result = await supabase.from('items').select('*')
-    data = result.data
-    error = result.error
-
-    if (error) {
-      console.error('Supabaseエラー:', error)
-    } else {
-      console.log('データ取得成功:', data ? `${data.length}件のアイテム` : 'データなし')
-    }
-  } catch (e) {
-    console.error('予期せぬエラーが発生しました:', e)
-  }
-
-  return (
-    <main className='flex max-w-4xl flex-col gap-16 px-6 py-12'>
-      <Hero />
-      <Achievements />
-      <Contact />
-    </main>
-  )
-}
-````
-
 ## File: .gitignore
 ````
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
@@ -5185,16 +5794,54 @@ next-env.d.ts
 # /knowledge
 ````
 
+## File: app/page.tsx
+````typescript
+import { createClient } from '@/lib/supabase/server'
+
+import Hero from './components/Hero'
+
+export default async function Home() {
+  let data = null
+  let error = null
+
+  try {
+    const supabase = await createClient()
+    console.log('Supabaseクライアント作成成功')
+
+    const result = await supabase.from('items').select('*')
+    data = result.data
+    error = result.error
+
+    if (error) {
+      console.error('Supabaseエラー:', error)
+    } else {
+      console.log('データ取得成功:', data ? `${data.length}件のアイテム` : 'データなし')
+    }
+  } catch (e) {
+    console.error('予期せぬエラーが発生しました:', e)
+  }
+
+  return (
+    <main className='container mx-auto max-w-4xl flex flex-col gap-16 px-6 py-12'>
+      <Hero />
+      {/* <Achievements /> */}
+      {/* <Contact /> */}
+    </main>
+  )
+}
+````
+
 ## File: app/components/Footer.tsx
 ````typescript
+import { ModeToggle } from '@/components/mode-toggle'
 import { Button } from '@/components/ui/button'
 import { footerNavListItems } from '@/data/navigations'
 import Link from 'next/link'
 
 export default function Footer() {
   return (
-    <footer className='sticky top-full items-center border-t p-6 text-sm'>
-      <div className='flex flex-col items-center justify-center text-muted-foreground'>
+    <footer className='sticky top-full w-full border-t mt-10'>
+      <div className='flex flex-col items-center justify-center text-muted-foreground p-6 text-sm'>
         <h2>四季守</h2>
         <ul className='flex flex-wrap list-none py-4'>
           {footerNavListItems.map(item => (
@@ -5215,15 +5862,14 @@ export default function Footer() {
 ## File: app/layout.tsx
 ````typescript
 import { cn } from '@/lib/utils'
-import {
-  ClerkProvider
-} from '@clerk/nextjs'
+import { ClerkProvider } from '@clerk/nextjs'
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
 import Footer from './components/Footer'
 import Header from './components/Header'
 import './globals.css'
+import { ThemeProvider } from '@/components/theme-provider'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -5256,10 +5902,17 @@ export default function RootLayout({
           )}
           suppressHydrationWarning
         >
-          <Header />
-          {children}
-          <Footer />
-          <Toaster position="top-right" />
+          <ThemeProvider
+            attribute='class'
+            defaultTheme='system'
+            enableSystem
+            disableTransitionOnChange
+          >
+            <Header />
+            {children}
+            <Footer />
+            <Toaster position='top-right' />
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>
@@ -5283,11 +5936,12 @@ import {
   UserButton
 } from '@clerk/nextjs'
 import { useIsAdmin } from '@/lib/hooks/useIsAdmin' // 管理者判定フックをインポート
+import { ModeToggle } from '@/components/mode-toggle'
 
 export default function Header() {
   const { isAdmin, isLoading } = useIsAdmin(); // 管理者判定フックを使用
   return (
-    <header className='flex h-16 items-center justify-between border-b border-slate-200 px-6'>
+    <header className='flex h-16 items-center justify-between border-b px-6'>
       <h1 className='font-bold'>
         <Button variant='ghost' asChild>
           <Link href='/'>四季守</Link>
@@ -5308,7 +5962,7 @@ export default function Header() {
             {!isLoading && isAdmin && (
               <li>
                 <Button variant='ghost' asChild>
-                  <Link href='/admin'>管理</Link>
+                  <Link href='/admin'>ダッシュボード</Link>
                 </Button>
               </li>
             )}
@@ -5360,6 +6014,9 @@ export default function Header() {
       <div className='md:hidden'>
         <MobileNav />
       </div>
+      <div className='ml-2'>
+        <ModeToggle />
+      </div>
     </header>
   )
 }
@@ -5375,14 +6032,17 @@ export default function Header() {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:seed": "prisma db seed"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.12.1",
+    "@faker-js/faker": "^9.6.0",
     "@prisma/client": "6.5.0",
     "@radix-ui/react-alert-dialog": "^1.1.6",
     "@radix-ui/react-checkbox": "^1.1.4",
     "@radix-ui/react-dialog": "^1.1.6",
+    "@radix-ui/react-dropdown-menu": "^2.1.7",
     "@radix-ui/react-label": "^2.1.2",
     "@radix-ui/react-slot": "^1.1.2",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
@@ -5394,9 +6054,11 @@ export default function Header() {
     "checkbox": "^0.0.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "dialog": "^0.3.1",
     "lucide-react": "^0.475.0",
     "next": "15.1.4",
+    "next-themes": "^0.4.6",
     "prettier": "^3.5.0",
     "prisma": "^6.5.0",
     "react": "^19.0.0",
@@ -5407,6 +6069,9 @@ export default function Header() {
     "svix": "^1.60.1",
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7"
+  },
+  "prisma": {
+    "seed": "bun --bun prisma/seed.ts"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

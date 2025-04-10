@@ -1,9 +1,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 body{
 	@apply mx-auto bg-white text-black dark:bg-slate-950 dark:text-slate-100  
 }
+
+.heading2 {
+  @apply text-3xl font-bold mb-4;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

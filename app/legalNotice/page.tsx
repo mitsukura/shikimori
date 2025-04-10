@@ -1,7 +1,14 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: '特定商取引法に基づく表記 | 四季守',
+  description: '当社の特定商取引法に基づく表記を説明します。',
+};
+
 export default function Page() {
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 prose prose-sm">
-      <h1>特定商取引法に基づく表記</h1>
+    <div className="max-w-4xl mx-auto px-4 py-8 prose prose-sm dark:prose-invert">
+      <h1 className="heading2">特定商取引法に基づく表記</h1>
 
       <div>
         <div>
