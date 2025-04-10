@@ -53,9 +53,7 @@ export default function ProfileView({ userData }: ProfileViewProps) {
     }
   };
   return (
-    <div className="max-w-2xl mt-10 mx-auto p-4 bg-white dark:bg-slate-900 rounded-lg shadow dark:shadow-slate-800">
-      <h1 className="text-2xl font-bold mb-6">プロフィール</h1>
-      
+    <div className="max-w-4xl mt-10 mx-auto p-4 bg-white dark:bg-slate-900/20 rounded-lg shadow dark:shadow-slate-800/80">
       <div className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold">名前</h2>

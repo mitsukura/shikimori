@@ -73,8 +73,8 @@ export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps
   };
 
   return (
-    <div className="max-w-2xl mx-auto mt-10 p-4 bg-white dark:bg-slate-900 rounded-lg shadow dark:shadow-slate-800">
-      <h1 className="text-2xl font-bold mb-6">プロフィール{initialData ? '編集' : '登録'}</h1>
+    <div className="max-w-4xl mx-auto mt-10 p-4 bg-white dark:bg-slate-900/20 rounded-lg shadow dark:shadow-slate-800/80">
+      <h1 className="heading2">プロフィール{initialData ? '編集' : '登録'}</h1>
       
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-2 gap-4">

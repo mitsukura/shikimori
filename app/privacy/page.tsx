@@ -1,7 +1,15 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'プライバシー・ポリシー | 四季守',
+  description: '当社のプライバシー・ポリシーを説明します。',
+};
+
 export default function Page() {
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 prose prose-sm">
-      <h1>プライバシー・ポリシー</h1>
+    <div className="max-w-4xl mx-auto px-4 py-8 prose prose-sm dark:prose-invert">
+      <h1 className="heading2">プライバシー・ポリシー</h1>
       
       <div>
         <section>
