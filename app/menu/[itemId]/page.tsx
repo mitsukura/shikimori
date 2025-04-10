@@ -20,7 +20,7 @@ export async function generateMetadata(
   { params }: Props,
   parent: ResolvingMetadata
 ): Promise<Metadata> {
-  const itemId = params.itemId;
+  const { itemId } = await params;
   const supabase = await createClient();
   const { data: item } = await supabase
     .from('items')
@@ -37,7 +37,7 @@ export async function generateMetadata(
 }
 
 export default async function ItemDetailPage({ params }: Props) {
-  const { itemId } = params;
+  const { itemId } = await params;
   const supabase = await createClient();
 
   const { data: item, error } = await supabase

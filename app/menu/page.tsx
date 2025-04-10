@@ -32,6 +32,9 @@ export default async function Page() {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="heading2">メニュー一覧</h1>
+      <p className="text-sm text-muted-foreground mb-10">
+        以下の商品は、当店で提供している商品です。
+      </p>
 
       {fetchError && <p className="text-red-500">{fetchError}</p>}
 
