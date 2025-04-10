@@ -9,11 +9,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useIsAdmin } from '@/lib/hooks/useIsAdmin';
 import { supabase } from '@/lib/supabase/client';
 import type { ProfileFormData, ProfileFormProps } from '@/types/profile';
 
-export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps) {
+export default function ProfileForm({ initialData, onSuccess, targetUserId }: ProfileFormProps) {
   const { user } = useUser();
+  const { isAdmin } = useIsAdmin();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -31,15 +33,25 @@ export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps
    * プロフィール情報を更新する
    */
   const onSubmit = async (data: ProfileFormData) => {
-    if (!user) {
-      toast.error('ユーザー情報が取得できません');
+    // 編集対象のユーザーID（指定されていなければ現在のユーザー）
+    const userIdToUpdate = targetUserId || user?.id;
+    
+    if (!userIdToUpdate) {
+      toast.error('ユーザー情報が取得できませんでした');
       return;
     }
     
+    // 自分自身のプロフィールか管理者でない場合は編集不可
+    const isOwnProfile = user && user.id === userIdToUpdate;
+    if (!isOwnProfile && !isAdmin) {
+      toast.error('このプロフィールを編集する権限がありません');
+      return;
+    }
+
     setLoading(true);
-    
+
     try {
-      // データベース更新用のオブジェクトを作成
+      // 更新するデータを準備
       const updateData = {
         first_name: data.firstName,
         last_name: data.lastName,
@@ -48,11 +60,11 @@ export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps
         address: data.address,
         updated_at: new Date().toISOString(),
       };
-      
+
       const { error } = await supabase
         .from('users')
         .update(updateData)
-        .eq('clerk_id', user.id);
+        .eq('clerk_id', userIdToUpdate);
         
       if (error) {
         console.error('プロフィール更新エラー:', error.message);
@@ -63,7 +75,12 @@ export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps
       toast.success('プロフィールを更新しました');
       if (onSuccess) onSuccess();
       
-      router.push('/profile');
+      // ユーザー詳細ページに戻る
+      if (targetUserId) {
+        router.push(`/profile/${targetUserId}`);
+      } else {
+        router.push('/profile');
+      }
     } catch (error) {
       console.error('予期せぬエラー:', error);
       toast.error('予期せぬエラーが発生しました');
@@ -73,24 +90,10 @@ export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps
   };
 
   return (
-    <div className="max-w-4xl mx-auto mt-10 p-4 bg-white dark:bg-slate-900/20 rounded-lg shadow dark:shadow-slate-800/80">
-      <h1 className="heading2">プロフィール{initialData ? '編集' : '登録'}</h1>
+    <div className="max-w-4xl mt-10 mx-auto p-4 bg-white dark:bg-slate-900/20 rounded-lg shadow dark:shadow-slate-800/80">      <h1 className="heading2">プロフィール{initialData ? '編集' : '登録'}</h1>
       
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="firstName">名</Label>
-            <Input
-              id="firstName"
-              autoComplete='off'
-              {...register('firstName', { required: '名は必須です' })}
-              placeholder="名"
-            />
-            {errors.firstName && (
-              <p className="text-red-500 text-sm">{errors.firstName.message}</p>
-            )}
-          </div>
-          
           <div className="space-y-2">
             <Label htmlFor="lastName">姓</Label>
             <Input
@@ -101,6 +104,19 @@ export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps
             />
             {errors.lastName && (
               <p className="text-red-500 text-sm">{errors.lastName.message}</p>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="firstName">名</Label>
+            <Input
+              id="firstName"
+              autoComplete='off'
+              {...register('firstName', { required: '名は必須です' })}
+              placeholder="名"
+            />
+            {errors.firstName && (
+              <p className="text-red-500 text-sm">{errors.firstName.message}</p>
             )}
           </div>
         </div>
@@ -141,7 +157,14 @@ export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps
           <Button 
             type="button" 
             variant="outline" 
-            onClick={() => router.push('/profile')}
+            onClick={() => {
+              // キャンセル時はユーザー詳細ページに戻る
+              if (targetUserId) {
+                router.push(`/profile/${targetUserId}`);
+              } else {
+                router.push('/profile');
+              }
+            }}
           >
             キャンセル
           </Button>

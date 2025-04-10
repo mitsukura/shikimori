@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
+import { useIsAdmin } from '@/lib/hooks/useIsAdmin';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,13 +23,18 @@ import type { ProfileViewProps } from '@/types/profile';
 
 
 
-export default function ProfileView({ userData }: ProfileViewProps) {
-  const { user } = useUser();
+export default function ProfileView({ userData, targetUserId }: ProfileViewProps) {
+  const { user, isLoaded } = useUser();
+  const { isAdmin, isLoading: isAdminLoading } = useIsAdmin();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const handleDelete = async () => {
-    if (!user) return;
+    // 削除対象のユーザーID
+    const userIdToDelete = targetUserId || (user?.id ? user.id : null);
+    
+    if (!userIdToDelete) return;
     
     setLoading(true);
     
@@ -35,14 +42,16 @@ export default function ProfileView({ userData }: ProfileViewProps) {
       const { error } = await supabase
         .from('users')
         .delete()
-        .eq('clerk_id', user.id);
+        .eq('clerk_id', userIdToDelete);
         
       if (error) {
         console.log('Error deleting profile:', error);
         toast.error('プロフィールの削除に失敗しました');
       } else {
         toast.success('プロフィールを削除しました');
-        window.location.reload();
+        
+        // 管理者ダッシュボードのユーザー一覧ページにリダイレクト
+        router.push('/admin/users');
       }
     } catch (error) {
       console.log('Unexpected error:', error);
@@ -57,7 +66,7 @@ export default function ProfileView({ userData }: ProfileViewProps) {
       <div className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold">名前</h2>
-          <p>{userData.first_name} {userData.last_name}</p>
+          <p>{userData.last_name} {userData.first_name}</p>
         </div>
         
         <div>
@@ -87,29 +96,51 @@ export default function ProfileView({ userData }: ProfileViewProps) {
         )}
         
         <div className="pt-4 flex gap-4">
-          <Link href="/profile/edit">
-            <Button>プロフィールを編集</Button>
-          </Link>
+          {/* 編集ボタンはユーザー自身または管理者のみ表示 */}
+          {isLoaded && !isAdminLoading && (() => {
+            const isOwner = user && user.id === targetUserId;
+            const canEdit = isOwner || isAdmin;
+            
+            if (canEdit) {
+              return (
+                <Link href={targetUserId ? `/profile/${targetUserId}/edit` : '/profile/edit'}>
+                  <Button>プロフィールを編集</Button>
+                </Link>
+              );
+            }
+            return null;
+          })()}
           
-          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive">プロフィールを削除</Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>プロフィールを削除しますか？</AlertDialogTitle>
-                <AlertDialogDescription>
-                  この操作は取り消せません。プロフィール情報がすべて削除されます。
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} disabled={loading}>
-                  {loading ? '削除中...' : '削除する'}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {/* 削除ボタンはユーザー自身または管理者のみ表示 */}
+          {isLoaded && !isAdminLoading && (() => {
+            const isOwner = user && user.id === targetUserId;
+            const canDelete = isOwner || isAdmin;
+            
+            if (canDelete) {
+              return (
+                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive">プロフィールを削除</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>プロフィールを削除しますか？</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        この操作は取り消せません。プロフィール情報がすべて削除されます。
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDelete} disabled={loading}>
+                        {loading ? '削除中...' : '削除する'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              );
+            }
+            return null;
+          })()}
         </div>
       </div>
     </div>

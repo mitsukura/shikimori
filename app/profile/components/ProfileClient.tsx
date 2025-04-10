@@ -9,7 +9,7 @@ import ProfileForm from './ProfileForm';
 import { supabase } from '@/lib/supabase/client';
 import type { ProfileClientProps } from '@/types/profile';
 
-export default function ProfileClient({ mode }: ProfileClientProps) {
+export default function ProfileClient({ mode, targetUserId }: ProfileClientProps) {
   const { user, isLoaded } = useUser();
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<{
@@ -27,7 +27,10 @@ export default function ProfileClient({ mode }: ProfileClientProps) {
   const [needsCreate, setNeedsCreate] = useState(false);
 
   const fetchProfile = useCallback(async () => {
-    if (!user) return;
+    // 取得対象のユーザーIDを決定
+    const userIdToFetch = targetUserId || (user?.id ? user.id : null);
+    
+    if (!userIdToFetch) return;
     
     setLoading(true);
     
@@ -36,7 +39,7 @@ export default function ProfileClient({ mode }: ProfileClientProps) {
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
-        .eq('clerk_id', user.id)
+        .eq('clerk_id', userIdToFetch)
         .single();
       
       // ユーザーが存在しない場合は作成する
@@ -54,7 +57,7 @@ export default function ProfileClient({ mode }: ProfileClientProps) {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, targetUserId]);
 
   const createProfile = useCallback(async () => {
     if (!user || !needsCreate) return;
@@ -168,15 +171,15 @@ export default function ProfileClient({ mode }: ProfileClientProps) {
   }
 
   if (needsCreate || mode === 'create') {
-    return <ProfileForm onSuccess={fetchProfile} />;
+    return <ProfileForm onSuccess={fetchProfile} targetUserId={targetUserId || user?.id} />;
   }
 
   if (mode === 'edit' && userData) {
-    return <ProfileForm initialData={userData} onSuccess={fetchProfile} />;
+    return <ProfileForm initialData={userData} onSuccess={fetchProfile} targetUserId={targetUserId || user?.id} />;
   }
 
   if (userData) {
-    return <ProfileView userData={userData} />;
+    return <ProfileView userData={userData} targetUserId={targetUserId || user?.id} />;
   }
 
   return (

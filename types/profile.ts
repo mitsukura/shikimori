@@ -1,5 +1,6 @@
 export type ProfileClientProps = {
   mode: 'view' | 'edit' | 'create';
+  targetUserId?: string; // 表示・編集対象のユーザーID
 };
 
 export type ProfileViewProps = {
@@ -11,6 +12,7 @@ export type ProfileViewProps = {
     bio?: string;
     address?: string;
   };
+  targetUserId?: string; // 表示対象のユーザーID
 };
 
 // データベースのユーザー型
@@ -31,6 +33,7 @@ export type UserRecord = {
 export type ProfileFormProps = {
   initialData?: Partial<UserRecord>;
   onSuccess?: () => void;
+  targetUserId?: string; // 編集対象のユーザーID
 };
 
 // フォーム入力用の型定義
