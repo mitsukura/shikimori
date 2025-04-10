@@ -1,6 +1,12 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'お問い合わせ | 四季守',
+  description: 'お問い合わせページです。',
+};
 
 export default function Page() {
   return (
