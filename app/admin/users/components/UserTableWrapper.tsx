@@ -98,7 +98,8 @@ export default function UserTableWrapper() {
                   <TableCell>
                     <div className="flex space-x-2">
                       <Button variant="outline" size="sm" asChild>
-                        <Link href={`/profile/${user.clerkId}`}>詳細</Link>
+                        {/* clerk_idまたはclerkIdのどちらかを使用 */}
+                        <Link href={`/profile/${user.clerk_id || user.clerkId}`}>詳細</Link>
                       </Button>
                     </div>
                   </TableCell>

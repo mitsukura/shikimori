@@ -56,7 +56,7 @@ export default function MobileNav() {
             {mounted && !isLoading && isAdmin && (
               <li className='my-2'>
                 <Button variant='ghost' asChild onClick={() => setOpen(false)}>
-                  <Link href='/admin'>管理</Link>
+                  <Link href='/admin'>ダッシュボード</Link>
                 </Button>
               </li>
             )}

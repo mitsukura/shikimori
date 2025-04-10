@@ -179,231 +179,6 @@ tsconfig.json
 
 # Files
 
-## File: app/menu/[itemId]/page.tsx
-````typescript
-import { createClient } from '@/lib/supabase/server';
-import type { Item } from '@/types/item';
-import Image from 'next/image';
-import { notFound } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import type { Metadata, ResolvingMetadata } from 'next';
-
-type Props = {
-  params: { itemId: string };
-};
-
-// 動的メタデータ
-export async function generateMetadata(
-  { params }: Props,
-  parent: ResolvingMetadata
-): Promise<Metadata> {
-  const itemId = params.itemId;
-  const supabase = await createClient();
-  const { data: item } = await supabase
-    .from('items')
-    .select('name, description')
-    .eq('id', itemId)
-    .single();
-
-  const previousImages = (await parent).openGraph?.images || [];
-
-  return {
-    title: item ? `${item.name} | メニュー | 四季守` : '商品詳細 | 四季守',
-    description: item?.description?.substring(0, 100) || '商品の詳細情報ページです。', // 説明を100文字に制限
-  };
-}
-
-export default async function ItemDetailPage({ params }: Props) {
-  const { itemId } = params;
-  const supabase = await createClient();
-
-  const { data: item, error } = await supabase
-    .from('items')
-    .select('*')
-    .eq('id', itemId)
-    .single<Item>(); // 型を指定
-
-  if (error || !item) {
-    console.error('Error fetching item or item not found:', error?.message);
-    notFound(); // 404ページをレンダリング
-  }
-
-  const priceNumber = typeof item.price === 'number' ? item.price : Number(item.price);
-  const imageUrl = item.image_url
-    ? item.image_url.startsWith('http') || item.image_url.startsWith('/')
-      ? item.image_url
-      : `/${item.image_url}`
-    : '/placeholder-image.png'; // プレースホルダー画像が存在することを確認
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="md:grid md:grid-cols-3 md:gap-8 lg:gap-12">
-        {/* 左カラム（詳細、注意事項、手順） */}
-        <div className="md:col-span-2 space-y-8">
-          <section>
-            <h2 className="text-2xl font-semibold mb-4">商品詳細</h2>
-            <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
-              {item.description || '詳細な説明はありません。'}
-            </div>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold mb-4">ご購入にあたっての注意事項</h2>
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              <ul>
-                <li>サービスの提供エリアをご確認ください。</li>
-                <li>天候により作業日程が変更になる場合があります。</li>
-                <li>キャンセルポリシーは別途ご案内いたします。</li>
-                <li>作業範囲や内容によって追加料金が発生する場合があります。</li>
-                <li>お客様の立ち会いが必要な作業もございます。</li>
-              </ul>
-            </div>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold mb-4">ご契約・サービス利用手順</h2>
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              <ol>
-                <li>当ページ下部のボタンより購入手続きへ進みます。</li>
-                <li>決済情報を入力し、注文を確定します。</li>
-                <li>担当者より日程調整のご連絡を差し上げます。</li>
-                <li>指定日時にサービスを実施します。</li>
-                <li>完了確認をもって終了となります。</li>
-              </ol>
-            </div>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold mb-4">よくあるご質問</h2>
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="item-1">
-                <AccordionTrigger>サービスの対応エリアはどこですか？</AccordionTrigger>
-                <AccordionContent>
-                  現在、東京都、神奈川県、埼玉県、千葉県の一部地域で対応しております。詳細なエリアについては、お問い合わせください。
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="item-2">
-                <AccordionTrigger>キャンセルはいつまで可能ですか？</AccordionTrigger>
-                <AccordionContent>
-                  サービス実施日の3日前までであれば、キャンセル料は発生しません。2日前からはキャンセル料が発生しますので、ご了承ください。
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="item-3">
-                <AccordionTrigger>支払い方法は何がありますか？</AccordionTrigger>
-                <AccordionContent>
-                  クレジットカード、銀行振込、コンビニ決済に対応しております。法人のお客様は請求書払いも可能です。
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="item-4">
-                <AccordionTrigger>サービス内容のカスタマイズは可能ですか？</AccordionTrigger>
-                <AccordionContent>
-                  はい、可能です。ご要望に応じてカスタマイズいたしますので、お問い合わせフォームよりご連絡ください。追加料金が発生する場合がございます。
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="item-5">
-                <AccordionTrigger>作業時に立ち会いは必要ですか？</AccordionTrigger>
-                <AccordionContent>
-                  サービス内容によって異なります。基本的には初回と最終確認時の立ち会いをお願いしております。詳細は担当者からご連絡いたします。
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </section>
-        </div>
-
-        {/* 右カラム（画像、タイトル、価格、ボタン） */}
-        <div className="md:col-span-1 mt-8 md:mt-0 sticky top-24 h-fit border rounded-lg p-6 shadow">
-          <div className="relative aspect-video w-full mb-4">
-            <Image
-              src={imageUrl}
-              alt={item.name}
-              fill
-              className="object-cover rounded-lg"
-              sizes="(max-width: 768px) 100vw, 33vw"
-            />
-          </div>
-          <h1 className="text-2xl font-bold mb-2">{item.name}</h1>
-          <p className="text-xl font-semibold text-primary mb-6">
-            {priceNumber.toLocaleString('ja-JP', { style: 'currency', currency: 'JPY' })}
-          </p>
-          <Button className="w-full" size="lg" disabled> {/* ボタンは現在無効 */}
-            購入手続きへ
-          </Button>
-          <p className="text-xs text-muted-foreground mt-2 text-center">現在、購入機能は準備中です。</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-````
-
-## File: components/ui/accordion.tsx
-````typescript
-"use client"
-
-import * as React from "react"
-import * as AccordionPrimitive from "@radix-ui/react-accordion"
-import { ChevronDown } from "lucide-react"
-
-import { cn } from "@/lib/utils"
-
-const Accordion = AccordionPrimitive.Root
-
-const AccordionItem = React.forwardRef<
-  React.ElementRef<typeof AccordionPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Item>
->(({ className, ...props }, ref) => (
-  <AccordionPrimitive.Item
-    ref={ref}
-    className={cn("border-b", className)}
-    {...props}
-  />
-))
-AccordionItem.displayName = "AccordionItem"
-
-const AccordionTrigger = React.forwardRef<
-  React.ElementRef<typeof AccordionPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>
->(({ className, children, ...props }, ref) => (
-  <AccordionPrimitive.Header className="flex">
-    <AccordionPrimitive.Trigger
-      ref={ref}
-      className={cn(
-        "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
-        className
-      )}
-      {...props}
-    >
-      {children}
-      <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
-    </AccordionPrimitive.Trigger>
-  </AccordionPrimitive.Header>
-))
-AccordionTrigger.displayName = AccordionPrimitive.Trigger.displayName
-
-const AccordionContent = React.forwardRef<
-  React.ElementRef<typeof AccordionPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <AccordionPrimitive.Content
-    ref={ref}
-    className="overflow-hidden text-sm transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"
-    {...props}
-  >
-    <div className={cn("pb-4 pt-0", className)}>{children}</div>
-  </AccordionPrimitive.Content>
-))
-
-AccordionContent.displayName = AccordionPrimitive.Content.displayName
-
-export { Accordion, AccordionItem, AccordionTrigger, AccordionContent }
-````
-
 ## File: app/admin/components/AdminSidebar.tsx
 ````typescript
 'use client'; // クライアントコンポーネントとしてLinkを使用
@@ -1534,68 +1309,6 @@ export default function Procedure() {
 }
 ````
 
-## File: app/menu/components/ItemCard.tsx
-````typescript
-import Image from 'next/image';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import type { Item } from '@/types/item';
-
-type ItemCardProps = {
-  item: Item;
-};
-
-export default function ItemCard({ item }: ItemCardProps) {
-  // 価格が数値であることを確認
-  const priceNumber = typeof item.price === 'number' ? item.price : Number(item.price);
-
-  // 画像URLの処理: 相対パスの場合は先頭にスラッシュを追加
-  const imageUrl = item.image_url
-    ? item.image_url.startsWith('http') || item.image_url.startsWith('/')
-      ? item.image_url
-      : `/${item.image_url}`
-    : '/placeholder-image.png';
-
-  return (
-    <Card className="flex flex-col h-full">
-      <CardHeader className="p-0">
-        <div className="relative aspect-video w-full">
-          <Image
-            src={imageUrl}
-            alt={item.name}
-            fill
-            className="object-cover rounded-t-lg"
-            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-          />
-        </div>
-      </CardHeader>
-      <CardContent className="pt-4 flex-grow">
-        <CardTitle className="mb-2 text-lg">{item.name}</CardTitle>
-        <CardDescription className="text-sm text-muted-foreground line-clamp-3">
-          {item.description || '説明はありません。'}
-        </CardDescription>
-      </CardContent>
-      <CardFooter className="flex justify-between items-center pt-4">
-        <span className="font-semibold">
-          {priceNumber.toLocaleString('ja-JP', { style: 'currency', currency: 'JPY' })}
-        </span>
-        <Badge variant={item.is_available ? 'default' : 'secondary'}>
-          {item.is_available ? '販売中' : '準備中'}
-          {/* オプションでストック数を表示: {item.stock} */}
-        </Badge>
-      </CardFooter>
-    </Card>
-  );
-}
-````
-
 ## File: app/profile/edit/page.tsx
 ````typescript
 'use client';
@@ -1605,6 +1318,68 @@ import ProfileClient from '../components/ProfileClient';
 export default function ProfileEditPage() {
   return <ProfileClient mode="edit" />;
 }
+````
+
+## File: components/ui/accordion.tsx
+````typescript
+"use client"
+
+import * as React from "react"
+import * as AccordionPrimitive from "@radix-ui/react-accordion"
+import { ChevronDown } from "lucide-react"
+
+import { cn } from "@/lib/utils"
+
+const Accordion = AccordionPrimitive.Root
+
+const AccordionItem = React.forwardRef<
+  React.ElementRef<typeof AccordionPrimitive.Item>,
+  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Item>
+>(({ className, ...props }, ref) => (
+  <AccordionPrimitive.Item
+    ref={ref}
+    className={cn("border-b", className)}
+    {...props}
+  />
+))
+AccordionItem.displayName = "AccordionItem"
+
+const AccordionTrigger = React.forwardRef<
+  React.ElementRef<typeof AccordionPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>
+>(({ className, children, ...props }, ref) => (
+  <AccordionPrimitive.Header className="flex">
+    <AccordionPrimitive.Trigger
+      ref={ref}
+      className={cn(
+        "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
+        className
+      )}
+      {...props}
+    >
+      {children}
+      <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
+    </AccordionPrimitive.Trigger>
+  </AccordionPrimitive.Header>
+))
+AccordionTrigger.displayName = AccordionPrimitive.Trigger.displayName
+
+const AccordionContent = React.forwardRef<
+  React.ElementRef<typeof AccordionPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Content>
+>(({ className, children, ...props }, ref) => (
+  <AccordionPrimitive.Content
+    ref={ref}
+    className="overflow-hidden text-sm transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"
+    {...props}
+  >
+    <div className={cn("pb-4 pt-0", className)}>{children}</div>
+  </AccordionPrimitive.Content>
+))
+
+AccordionContent.displayName = AccordionPrimitive.Content.displayName
+
+export { Accordion, AccordionItem, AccordionTrigger, AccordionContent }
 ````
 
 ## File: components/ui/alert-dialog.tsx
@@ -4761,6 +4536,234 @@ export default function Achievements() {
 }
 ````
 
+## File: app/menu/[itemId]/page.tsx
+````typescript
+import { createClient } from '@/lib/supabase/server';
+import type { Item } from '@/types/item';
+import Image from 'next/image';
+import { notFound } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import type { Metadata, ResolvingMetadata } from 'next';
+
+type Props = {
+  params: { itemId: string };
+};
+
+// 動的メタデータ
+export async function generateMetadata(
+  { params }: Props,
+  parent: ResolvingMetadata
+): Promise<Metadata> {
+  const { itemId } = await params;
+  const supabase = await createClient();
+  const { data: item } = await supabase
+    .from('items')
+    .select('name, description')
+    .eq('id', itemId)
+    .single();
+
+  const previousImages = (await parent).openGraph?.images || [];
+
+  return {
+    title: item ? `${item.name} | メニュー | 四季守` : '商品詳細 | 四季守',
+    description: item?.description?.substring(0, 100) || '商品の詳細情報ページです。', // 説明を100文字に制限
+  };
+}
+
+export default async function ItemDetailPage({ params }: Props) {
+  const { itemId } = await params;
+  const supabase = await createClient();
+
+  const { data: item, error } = await supabase
+    .from('items')
+    .select('*')
+    .eq('id', itemId)
+    .single<Item>(); // 型を指定
+
+  if (error || !item) {
+    console.error('Error fetching item or item not found:', error?.message);
+    notFound(); // 404ページをレンダリング
+  }
+
+  const priceNumber = typeof item.price === 'number' ? item.price : Number(item.price);
+  const imageUrl = item.image_url
+    ? item.image_url.startsWith('http') || item.image_url.startsWith('/')
+      ? item.image_url
+      : `/${item.image_url}`
+    : '/placeholder-image.png'; // プレースホルダー画像が存在することを確認
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="md:grid md:grid-cols-3 md:gap-8 lg:gap-12">
+        {/* 左カラム（詳細、注意事項、手順） */}
+        <div className="md:col-span-2 space-y-8">
+          <section>
+            <h2 className="text-2xl font-semibold mb-4">商品詳細</h2>
+            <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+              {item.description || '詳細な説明はありません。'}
+            </div>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold mb-4">ご購入にあたっての注意事項</h2>
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <ul>
+                <li>サービスの提供エリアをご確認ください。</li>
+                <li>天候により作業日程が変更になる場合があります。</li>
+                <li>キャンセルポリシーは別途ご案内いたします。</li>
+                <li>作業範囲や内容によって追加料金が発生する場合があります。</li>
+                <li>お客様の立ち会いが必要な作業もございます。</li>
+              </ul>
+            </div>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold mb-4">ご契約・サービス利用手順</h2>
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <ol>
+                <li>当ページ下部のボタンより購入手続きへ進みます。</li>
+                <li>決済情報を入力し、注文を確定します。</li>
+                <li>担当者より日程調整のご連絡を差し上げます。</li>
+                <li>指定日時にサービスを実施します。</li>
+                <li>完了確認をもって終了となります。</li>
+              </ol>
+            </div>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold mb-4">よくあるご質問</h2>
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="item-1">
+                <AccordionTrigger>サービスの対応エリアはどこですか？</AccordionTrigger>
+                <AccordionContent>
+                  現在、東京都、神奈川県、埼玉県、千葉県の一部地域で対応しております。詳細なエリアについては、お問い合わせください。
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="item-2">
+                <AccordionTrigger>キャンセルはいつまで可能ですか？</AccordionTrigger>
+                <AccordionContent>
+                  サービス実施日の3日前までであれば、キャンセル料は発生しません。2日前からはキャンセル料が発生しますので、ご了承ください。
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="item-3">
+                <AccordionTrigger>支払い方法は何がありますか？</AccordionTrigger>
+                <AccordionContent>
+                  クレジットカード、銀行振込、コンビニ決済に対応しております。法人のお客様は請求書払いも可能です。
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="item-4">
+                <AccordionTrigger>サービス内容のカスタマイズは可能ですか？</AccordionTrigger>
+                <AccordionContent>
+                  はい、可能です。ご要望に応じてカスタマイズいたしますので、お問い合わせフォームよりご連絡ください。追加料金が発生する場合がございます。
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="item-5">
+                <AccordionTrigger>作業時に立ち会いは必要ですか？</AccordionTrigger>
+                <AccordionContent>
+                  サービス内容によって異なります。基本的には初回と最終確認時の立ち会いをお願いしております。詳細は担当者からご連絡いたします。
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </section>
+        </div>
+
+        {/* 右カラム（画像、タイトル、価格、ボタン） */}
+        <div className="md:col-span-1 mt-8 md:mt-0 sticky top-24 h-fit border rounded-lg p-6 shadow">
+          <div className="relative aspect-video w-full mb-4">
+            <Image
+              src={imageUrl}
+              alt={item.name}
+              fill
+              className="object-cover rounded-lg"
+              sizes="(max-width: 768px) 100vw, 33vw"
+            />
+          </div>
+          <h1 className="text-2xl font-bold mb-2">{item.name}</h1>
+          <p className="text-xl font-semibold text-primary mb-6">
+            {priceNumber.toLocaleString('ja-JP', { style: 'currency', currency: 'JPY' })}
+          </p>
+          <Button className="w-full" size="lg" disabled> {/* ボタンは現在無効 */}
+            購入手続きへ
+          </Button>
+          <p className="text-xs text-muted-foreground mt-2 text-center">現在、購入機能は準備中です。</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+````
+
+## File: app/menu/components/ItemCard.tsx
+````typescript
+import Image from 'next/image';
+import Link from 'next/link';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import type { Item } from '@/types/item';
+
+type ItemCardProps = {
+  item: Item;
+};
+
+export default function ItemCard({ item }: ItemCardProps) {
+  // 価格が数値であることを確認
+  const priceNumber = typeof item.price === 'number' ? item.price : Number(item.price);
+
+  // 画像URLの処理: 相対パスの場合は先頭にスラッシュを追加
+  const imageUrl = item.image_url
+    ? item.image_url.startsWith('http') || item.image_url.startsWith('/')
+      ? item.image_url
+      : `/${item.image_url}`
+    : '/placeholder-image.png';
+
+  return (
+    <Link href={`/menu/${item.id}`} className="block h-full transition-transform duration-200 ease-in-out hover:scale-[1.02]">
+      <Card className="flex flex-col h-full overflow-hidden cursor-pointer">
+        <CardHeader className="p-0">
+          <div className="relative aspect-video w-full">
+            <Image
+              src={imageUrl}
+              alt={item.name}
+              fill
+              className="object-cover"
+              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            />
+          </div>
+        </CardHeader>
+        <CardContent className="pt-4 flex-grow">
+          <CardTitle className="mb-2 text-lg">{item.name}</CardTitle>
+          <CardDescription className="text-sm text-muted-foreground line-clamp-3">
+            {item.description || '説明はありません。'}
+          </CardDescription>
+        </CardContent>
+        <CardFooter className="flex justify-between items-center pt-4">
+          <span className="font-semibold">
+            {priceNumber.toLocaleString('ja-JP', { style: 'currency', currency: 'JPY' })}
+          </span>
+          <Badge variant={item.is_available ? 'default' : 'secondary'}>
+            {item.is_available ? '販売中' : '準備中'}
+            {/* オプションでストック数を表示: {item.stock} */}
+          </Badge>
+        </CardFooter>
+      </Card>
+    </Link>
+  );
+}
+````
+
 ## File: data/navigations.ts
 ````typescript
 export const navListItems = [
@@ -5257,60 +5260,6 @@ export default function Page() {
       </div>
     </div>
   )
-}
-````
-
-## File: app/menu/page.tsx
-````typescript
-import { createClient } from '@/lib/supabase/server';
-import ItemCard from './components/ItemCard';
-import type { Item } from '@/types/item';
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'メニュー | 四季守',
-  description: '当店で提供している美味しいメニューの一覧をご覧いただけます。',
-};
-
-export default async function Page() {
-  let items: Item[] | null = null;
-  let fetchError: string | null = null;
-
-  try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from('items')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      throw error;
-    }
-    items = data;
-  } catch (error) {
-    console.error('Error fetching items:', error);
-    fetchError = '商品の読み込み中にエラーが発生しました。';
-  }
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="heading2">メニュー一覧</h1>
-
-      {fetchError && <p className="text-red-500">{fetchError}</p>}
-
-      {!fetchError && (!items || items.length === 0) && (
-        <p>現在、表示できる商品はありません。</p>
-      )}
-
-      {items && items.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {items.map((item) => (
-            <ItemCard key={item.id} item={item} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
 ````
 
@@ -5874,94 +5823,6 @@ export default function ProfileView({ userData }: ProfileViewProps) {
 }
 ````
 
-## File: tailwind.config.ts
-````typescript
-import type { Config } from 'tailwindcss'
-
-export default {
-  darkMode: ['class'],
-  content: [
-    './pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './components/**/*.{js,ts,jsx,tsx,mdx}',
-    './app/**/*.{js,ts,jsx,tsx,mdx}'
-  ],
-  theme: {
-  	extend: {
-  		colors: {
-  			background: 'hsl(var(--background))',
-  			foreground: 'hsl(var(--foreground))',
-  			card: {
-  				DEFAULT: 'hsl(var(--card))',
-  				foreground: 'hsl(var(--card-foreground))'
-  			},
-  			popover: {
-  				DEFAULT: 'hsl(var(--popover))',
-  				foreground: 'hsl(var(--popover-foreground))'
-  			},
-  			primary: {
-  				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))'
-  			},
-  			secondary: {
-  				DEFAULT: 'hsl(var(--secondary))',
-  				foreground: 'hsl(var(--secondary-foreground))'
-  			},
-  			muted: {
-  				DEFAULT: 'hsl(var(--muted))',
-  				foreground: 'hsl(var(--muted-foreground))'
-  			},
-  			accent: {
-  				DEFAULT: 'hsl(var(--accent))',
-  				foreground: 'hsl(var(--accent-foreground))'
-  			},
-  			destructive: {
-  				DEFAULT: 'hsl(var(--destructive))',
-  				foreground: 'hsl(var(--destructive-foreground))'
-  			},
-  			border: 'hsl(var(--border))',
-  			input: 'hsl(var(--input))',
-  			ring: 'hsl(var(--ring))',
-  			chart: {
-  				'1': 'hsl(var(--chart-1))',
-  				'2': 'hsl(var(--chart-2))',
-  				'3': 'hsl(var(--chart-3))',
-  				'4': 'hsl(var(--chart-4))',
-  				'5': 'hsl(var(--chart-5))'
-  			}
-  		},
-  		borderRadius: {
-  			lg: 'var(--radius)',
-  			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
-  		},
-  		keyframes: {
-  			'accordion-down': {
-  				from: {
-  					height: '0'
-  				},
-  				to: {
-  					height: 'var(--radix-accordion-content-height)'
-  				}
-  			},
-  			'accordion-up': {
-  				from: {
-  					height: 'var(--radix-accordion-content-height)'
-  				},
-  				to: {
-  					height: '0'
-  				}
-  			}
-  		},
-  		animation: {
-  			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out'
-  		}
-  	}
-  },
-  plugins: [require('tailwindcss-animate'), require("@tailwindcss/typography")],
-} satisfies Config
-````
-
 ## File: app/about/page.tsx
 ````typescript
 import type { Metadata } from 'next';
@@ -6073,46 +5934,60 @@ export default function About() {
 }
 ````
 
-## File: app/contact/page.tsx
+## File: app/menu/page.tsx
 ````typescript
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
+import { createClient } from '@/lib/supabase/server';
+import ItemCard from './components/ItemCard';
+import type { Item } from '@/types/item';
+import type { Metadata } from 'next';
 
-export default function Page() {
+export const metadata: Metadata = {
+  title: 'メニュー | 四季守',
+  description: '当店で提供している美味しいメニューの一覧をご覧いただけます。',
+};
+
+export default async function Page() {
+  let items: Item[] | null = null;
+  let fetchError: string | null = null;
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('items')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+    items = data;
+  } catch (error) {
+    console.error('Error fetching items:', error);
+    fetchError = '商品の読み込み中にエラーが発生しました。';
+  }
+
   return (
-    <div className='container prose prose-sm mx-auto p-6 dark:prose-invert'>
-      <p className='mt-10'>
-        お見積りのお問い合わせなどこちらからお問い合わせください。
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="heading2">メニュー一覧</h1>
+      <p className="text-sm text-muted-foreground mb-10">
+        以下の商品は、当店で提供している商品です。
       </p>
-      <div className='mt-10 flex flex-col items-center justify-center gap-4 p-4'>
-        <div className='min-h-[721px] w-full max-w-2xl'>
-          <h2>お問い合わせ</h2>
-          <form
-            action='https://ssgform.com/s/uV0iqmPuFyP0'
-            method='post'
-            className='flex flex-col gap-4'
-          >
-            <label htmlFor='name' className='space-y-1'>
-              <span>お名前</span>
-              <Input type='text' name='name' id='name' required />
-            </label>
-            <label htmlFor='email' className='space-y-1'>
-              <span>メールアドレス</span>
-              <Input type='email' name='email' id='email' required />
-            </label>
-            <label htmlFor='message' className='space-y-1'>
-              <span>お問い合わせ内容</span>
-              <Textarea name='message' id='message' required />
-            </label>
-            <Button variant='default' type='submit'>
-              送信する
-            </Button>
-          </form>
+
+      {fetchError && <p className="text-red-500">{fetchError}</p>}
+
+      {!fetchError && (!items || items.length === 0) && (
+        <p>現在、表示できる商品はありません。</p>
+      )}
+
+      {items && items.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {items.map((item) => (
+            <ItemCard key={item.id} item={item} />
+          ))}
         </div>
-      </div>
+      )}
     </div>
-  )
+  );
 }
 ````
 
@@ -6165,6 +6040,143 @@ next-env.d.ts
 
 # knowledge
 # /knowledge
+````
+
+## File: tailwind.config.ts
+````typescript
+import type { Config } from 'tailwindcss'
+
+export default {
+  darkMode: ['class'],
+  content: [
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}'
+  ],
+  theme: {
+  	extend: {
+  		colors: {
+  			background: 'hsl(var(--background))',
+  			foreground: 'hsl(var(--foreground))',
+  			card: {
+  				DEFAULT: 'hsl(var(--card))',
+  				foreground: 'hsl(var(--card-foreground))'
+  			},
+  			popover: {
+  				DEFAULT: 'hsl(var(--popover))',
+  				foreground: 'hsl(var(--popover-foreground))'
+  			},
+  			primary: {
+  				DEFAULT: 'hsl(var(--primary))',
+  				foreground: 'hsl(var(--primary-foreground))'
+  			},
+  			secondary: {
+  				DEFAULT: 'hsl(var(--secondary))',
+  				foreground: 'hsl(var(--secondary-foreground))'
+  			},
+  			muted: {
+  				DEFAULT: 'hsl(var(--muted))',
+  				foreground: 'hsl(var(--muted-foreground))'
+  			},
+  			accent: {
+  				DEFAULT: 'hsl(var(--accent))',
+  				foreground: 'hsl(var(--accent-foreground))'
+  			},
+  			destructive: {
+  				DEFAULT: 'hsl(var(--destructive))',
+  				foreground: 'hsl(var(--destructive-foreground))'
+  			},
+  			border: 'hsl(var(--border))',
+  			input: 'hsl(var(--input))',
+  			ring: 'hsl(var(--ring))',
+  			chart: {
+  				'1': 'hsl(var(--chart-1))',
+  				'2': 'hsl(var(--chart-2))',
+  				'3': 'hsl(var(--chart-3))',
+  				'4': 'hsl(var(--chart-4))',
+  				'5': 'hsl(var(--chart-5))'
+  			}
+  		},
+  		borderRadius: {
+  			lg: 'var(--radius)',
+  			md: 'calc(var(--radius) - 2px)',
+  			sm: 'calc(var(--radius) - 4px)'
+  		},
+  		keyframes: {
+  			'accordion-down': {
+  				from: {
+  					height: '0'
+  				},
+  				to: {
+  					height: 'var(--radix-accordion-content-height)'
+  				}
+  			},
+  			'accordion-up': {
+  				from: {
+  					height: 'var(--radix-accordion-content-height)'
+  				},
+  				to: {
+  					height: '0'
+  				}
+  			}
+  		},
+  		animation: {
+  			'accordion-down': 'accordion-down 0.2s ease-out',
+  			'accordion-up': 'accordion-up 0.2s ease-out'
+  		}
+  	}
+  },
+  plugins: [require('tailwindcss-animate'), require("@tailwindcss/typography")],
+} satisfies Config
+````
+
+## File: app/contact/page.tsx
+````typescript
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'お問い合わせ | 四季守',
+  description: 'お問い合わせページです。',
+};
+
+export default function Page() {
+  return (
+    <div className='container prose prose-sm mx-auto p-6 dark:prose-invert'>
+      <p className='mt-10'>
+        お見積りのお問い合わせなどこちらからお問い合わせください。
+      </p>
+      <div className='mt-10 flex flex-col items-center justify-center gap-4 p-4'>
+        <div className='min-h-[721px] w-full max-w-2xl'>
+          <h2>お問い合わせ</h2>
+          <form
+            action='https://ssgform.com/s/uV0iqmPuFyP0'
+            method='post'
+            className='flex flex-col gap-4'
+          >
+            <label htmlFor='name' className='space-y-1'>
+              <span>お名前</span>
+              <Input type='text' name='name' id='name' required />
+            </label>
+            <label htmlFor='email' className='space-y-1'>
+              <span>メールアドレス</span>
+              <Input type='email' name='email' id='email' required />
+            </label>
+            <label htmlFor='message' className='space-y-1'>
+              <span>お問い合わせ内容</span>
+              <Textarea name='message' id='message' required />
+            </label>
+            <Button variant='default' type='submit'>
+              送信する
+            </Button>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}
 ````
 
 ## File: app/profile/page.tsx
