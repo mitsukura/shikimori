@@ -7,7 +7,8 @@ export async function GET(_request: Request, { params }: { params: { itemId: str
     return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
   }
 
-  const itemId = params.itemId;
+  // paramsを非同期的に処理
+  const { itemId } = await Promise.resolve(params);
 
   try {
     const supabase = await createClient();
@@ -31,7 +32,8 @@ export async function PUT(request: Request, { params }: { params: { itemId: stri
     return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
   }
 
-  const itemId = params.itemId;
+  // paramsを非同期的に処理
+  const { itemId } = await Promise.resolve(params);
 
   try {
     const body = await request.json();

@@ -1,6 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
 
-import Hero from './components/Hero'
+import HeroSection from './components/Hero-section'
+import { Features } from './components/Features'
+import { TestimonialsSection } from './components/Testimonial-section'
+
+import type { Metadata } from 'next';
+import Newsletter from './components/Newsletter';
+
+export const metadata: Metadata = {
+  title: '四季守 トップページ',
+  description: '四季を通じて地域をサポートするサービス'
+};
 
 export default async function Home() {
   let data = null
@@ -24,10 +34,11 @@ export default async function Home() {
   }
 
   return (
-    <main className='container mx-auto max-w-4xl flex flex-col gap-16 px-6 py-12'>
-      <Hero />
-      {/* <Achievements /> */}
-      {/* <Contact /> */}
+    <main className='mx-auto flex flex-col gap-16'>
+      <HeroSection />
+      <Features />
+      <TestimonialsSection />
+      <Newsletter />
     </main>
   )
 }
