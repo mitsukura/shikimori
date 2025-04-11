@@ -1,45 +1,44 @@
-# 四季守 (Shikimori) 🌸❄️🍃🍂
+# 四季守 (Shikimori) 🌸
 
-> 四季の除雪と草刈りを手軽に。Next.js, Clerk, Supabase で構築された地域サポートサービス
+> 四季を通じて地域をサポートする重機除雪・草刈りサービス。Next.js, Clerk, Supabase で構築された地域サポートプラットフォーム
 
 ## 📋 概要
 
 四季守（Shikimori）は、秋田県内を中心とした除雪・草刈りサービスのオンライン予約・管理プラットフォームです。地域住民の除雪・草刈りの負担を軽減し、サービス提供業者とのマッチングを効率化することを目的としています。
 
 ### 主な機能
-- ユーザー向け: サービス閲覧、プロフィール管理、お問い合わせ
+- ユーザー向け: サービス閲覧、プロフィール管理、お問い合わせ、ニュースレター登録
 - 管理者向け: ユーザー管理、商品管理、注文管理
-
-## 🖼️ スクリーンショット/デモ
-
-<!-- スクリーンショットやデモGIFをここに追加 -->
 
 ## 🛠️ 技術スタック
 
 ### フレームワーク・言語
-![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat&logo=next.js)
-![TypeScript](https://img.shields.io/badge/TypeScript-blue?style=flat&logo=typescript)
-![React](https://img.shields.io/badge/React-19-blue?style=flat&logo=react)
+![Next.js](https://img.shields.io/badge/Next.js-15.1.4-black?style=flat&logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat&logo=typescript)
+![React](https://img.shields.io/badge/React-19.0.0-blue?style=flat&logo=react)
 
 ### UI
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white)
-![shadcn/ui](https://img.shields.io/badge/shadcn/ui-black?style=flat)
-![Radix UI](https://img.shields.io/badge/Radix_UI-black?style=flat)
-![Lucide React](https://img.shields.io/badge/Lucide_React-icons-purple?style=flat)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4.1-38B2AC?style=flat&logo=tailwind-css&logoColor=white)
+![shadcn/ui](https://img.shields.io/badge/shadcn/ui-0.9.5-black?style=flat)
+![Radix UI](https://img.shields.io/badge/Radix_UI-multiple-black?style=flat)
+![Lucide React](https://img.shields.io/badge/Lucide_React-0.475.0-purple?style=flat)
+![Framer Motion](https://img.shields.io/badge/Framer_Motion-12.6.5-blue?style=flat&logo=framer)
+![Tabler Icons](https://img.shields.io/badge/Tabler_Icons-3.31.0-black?style=flat)
 
 ### 状態管理/フォーム
-![React Hook Form](https://img.shields.io/badge/React_Hook_Form-EC5990?style=flat)
+![React Hook Form](https://img.shields.io/badge/React_Hook_Form-7.54.2-EC5990?style=flat)
 
 ### 認証/データベース
-![Clerk](https://img.shields.io/badge/Clerk-authentication-purple?style=flat)
-![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=flat&logo=supabase)
-![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?style=flat&logo=prisma)
+![Clerk](https://img.shields.io/badge/Clerk-6.12.1-purple?style=flat)
+![Supabase](https://img.shields.io/badge/Supabase-2.49.1-3ECF8E?style=flat&logo=supabase)
+![Prisma](https://img.shields.io/badge/Prisma-6.5.0-2D3748?style=flat&logo=prisma)
 
 ### その他
 ![Bun](https://img.shields.io/badge/Bun-package_manager-F9F1E1?style=flat)
-![Sonner](https://img.shields.io/badge/Sonner-notifications-blue?style=flat)
-![date-fns](https://img.shields.io/badge/date--fns-date_utility-yellow?style=flat)
-![svix](https://img.shields.io/badge/svix-webhooks-orange?style=flat)
+![Sonner](https://img.shields.io/badge/Sonner-2.0.1-blue?style=flat)
+![date-fns](https://img.shields.io/badge/date--fns-4.1.0-yellow?style=flat)
+![svix](https://img.shields.io/badge/svix-1.60.1-orange?style=flat)
+![Embla Carousel](https://img.shields.io/badge/Embla_Carousel-8.6.0-pink?style=flat)
 
 ## ✨ 機能一覧
 
@@ -49,16 +48,22 @@
 - サービス（商品）一覧表示
 - サービス詳細表示
 - お問い合わせフォーム
-- (将来実装予定: サービス予約、決済機能)
+- ニュースレター登録
+- 特徴・サービス紹介セクション
+- テスティモニアル（お客様の声）表示
+- （将来実装予定: サービス予約、決済機能）
 
 ### 管理者向け機能
 - 管理者ダッシュボード
-- ユーザー管理（一覧表示、詳細表示）
+- ユーザー管理（一覧表示、詳細表示、編集）
 - 商品管理（一覧表示、CRUD操作）
+- 注文管理（将来実装予定）
 
 ### 共通機能
 - ダークモード対応
 - レスポンシブデザイン
+- アニメーションエフェクト（Framer Motion）
+- カルーセル表示（Embla Carousel）
 
 ## 📁 プロジェクト構造
 
@@ -66,11 +71,20 @@
 shikimori/
 ├── app/                  # Next.js App Routerのルートディレクトリ
 │   ├── api/              # APIエンドポイント
+│   │   ├── admin/        # 管理者用API
+│   │   └── webhook/      # Webhook処理
 │   ├── admin/            # 管理者向け画面
+│   │   ├── items/        # 商品管理
+│   │   └── users/        # ユーザー管理
+│   ├── about/            # 会社概要ページ
+│   ├── menu/             # サービスメニューページ
 │   ├── profile/          # ユーザープロフィール関連画面
 │   └── components/       # ページ固有のコンポーネント
 ├── components/           # 共通UIコンポーネント (shadcn/uiベース)
+│   └── ui/               # shadcn/uiコンポーネント
 ├── lib/                  # ユーティリティ、ヘルパー関数、カスタムフック
+│   ├── supabase/         # Supabase関連
+│   └── authUtils.ts      # 認証ユーティリティ
 ├── prisma/               # Prismaスキーマ、マイグレーション、シードスクリプト
 ├── public/               # 静的ファイル (画像、SVGなど)
 ├── types/                # TypeScriptの型定義
@@ -80,7 +94,7 @@ shikimori/
 
 ## 📊 データベーススキーマ (ER図)
 
-以下はプロジェクトのデータベーススキーマをER図で表したものです：
+以下は初期（※）のデータベーススキーマをER図で表したものです：
 
 ```mermaid
 erDiagram
@@ -184,7 +198,7 @@ erDiagram
 ## 🚀 セットアップ手順
 
 ### 前提条件
-- Node.js (v18以降推奨)
+- Node.js（v18以降推奨）
 - Bun (v1.x)
 - Git
 
@@ -254,16 +268,24 @@ bun start
 bun lint
 
 # データベースにサンプルデータを投入
-bunx prisma db seed
-# または
 bun db:seed
+# または
+bunx prisma db seed
+
+# Prismaマイグレーションを実行
+bunx prisma migrate dev
+
+# Prismaクライアントを生成
+bunx prisma generate
 ```
 
 ## 🌐 APIエンドポイント
 
-- `/api/admin/users` - ユーザー管理API
-- `/api/admin/items` - 商品管理API
-- `/api/webhook/clerk` - Clerk認証Webhook
+- `/api/admin/users` - ユーザー一覧取得・作成API
+- `/api/admin/users/[userId]` - 特定ユーザーの取得・更新・削除API
+- `/api/admin/items` - 商品一覧取得・作成API
+- `/api/admin/items/[itemId]` - 特定商品の取得・更新・削除API
+- `/api/webhook/clerk` - Clerk認証Webhook（ユーザー作成・更新・削除イベント処理）
 
 ## 🚢 デプロイ
 
@@ -284,5 +306,5 @@ bun db:seed
 
 ---
 
-四季守 (Shikimori) - 四季を通じて地域をサポートするサービス 🌸❄️🍃🍂
+四季守 (Shikimori) - 四季を通じて地域をサポートするサービス 🌸
 ****
