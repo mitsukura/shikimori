@@ -75,7 +75,7 @@ export function BackgroundPaths({
                     transition={{ duration: 2 }}
                     className="max-w-4xl mx-auto"
                 >
-                    <h1 className="text-5xl sm:text-7xl md:text-8xl font-bold mb-8 tracking-tighter">
+                    <h1 className="text-5xl sm:text-7xl md:text-8xl font-bold mb-8 tracking-widest heading-font">
                         {words.map((word, wordIndex) => {
                             // 単語の位置に基づいたユニークなキーを生成
                             const uniqueKey = `word-${word}-${Math.random().toString(36).substring(2, 9)}`;
