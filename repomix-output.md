@@ -88,6 +88,10 @@ app/
   privacy/
     page.tsx
   profile/
+    [clerkId]/
+      edit/
+        page.tsx
+      page.tsx
     components/
       ProfileClient.tsx
       ProfileForm.tsx
@@ -780,123 +784,6 @@ export default function AdminItemsPage() {
 }
 ````
 
-## File: app/admin/users/components/UserTableWrapper.tsx
-````typescript
-'use client';
-
-import { useState, useEffect, useCallback } from 'react';
-import { toast } from 'sonner';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-
-import { format } from 'date-fns';
-import { ja } from 'date-fns/locale';
-import type { User } from '@/types/user';
-
-
-
-export default function UserTableWrapper() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  const fetchUsers = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const response = await fetch('/api/admin/users');
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'ユーザーデータの取得中にエラーが発生しました');
-      }
-      
-      const data = await response.json();
-      setUsers(data);
-    } catch (error: unknown) {
-      console.error('ユーザーデータ取得エラー:', error);
-      setError(error instanceof Error ? error.message : 'ユーザーデータの取得中にエラーが発生しました');
-      toast.error(error instanceof Error ? error.message : 'ユーザーデータの取得中にエラーが発生しました');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
-  
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">ユーザー一覧</h2>
-        <Button onClick={() => fetchUsers()} variant="outline" size="sm">
-          更新
-        </Button>
-      </div>
-      
-      {loading ? (
-        <div className="py-8 text-center">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
-          <p className="mt-2 text-sm text-muted-foreground">ユーザーデータを読み込み中...</p>
-        </div>
-      ) : error ? (
-        <div className="py-8 text-center">
-          <p className="text-destructive">{error}</p>
-          <Button onClick={() => fetchUsers()} className="mt-4">再試行</Button>
-        </div>
-      ) : users.length === 0 ? (
-        <div className="py-8 text-center border rounded-md">
-          <p className="text-muted-foreground">ユーザーが見つかりませんでした</p>
-        </div>
-      ) : (
-        <div className="border rounded-md">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>名前</TableHead>
-                <TableHead>メール</TableHead>
-                <TableHead>登録日</TableHead>
-                <TableHead>操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    {user.lastName} {user.firstName}
-                  </TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>
-                    {user.created_at ? format(new Date(user.created_at), 'yyyy年MM月dd日', { locale: ja }) : '不明'}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={`/profile/${user.clerkId}`}>詳細</Link>
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-    </div>
-  );
-}
-````
-
 ## File: app/admin/users/page.tsx
 ````typescript
 import UserTableWrapper from './components/UserTableWrapper';
@@ -1306,6 +1193,112 @@ export default function Procedure() {
       </ul>
     </div>
   )
+}
+````
+
+## File: app/profile/[clerkId]/edit/page.tsx
+````typescript
+import { Suspense } from 'react';
+import { notFound } from 'next/navigation';
+import { auth } from '@clerk/nextjs/server';
+import { createClient } from '@/lib/supabase/server';
+import ProfileClient from '../../components/ProfileClient';
+import { isAdmin } from '@/lib/authUtils';
+
+export const metadata = {
+  title: 'プロフィール編集 | 四季森',
+  description: 'ユーザープロフィール情報の編集',
+};
+
+export default async function ProfileEditPage({ params }: { params: { clerkId: string } }) {
+  const { userId } = await auth();
+  const { clerkId } = await params;
+  const targetUserId = clerkId;
+  
+  // ユーザーが存在するか確認
+  const supabase = await createClient();
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('clerk_id', targetUserId)
+    .single();
+  
+  // ユーザーが見つからない場合は404
+  if (error || !user) {
+    notFound();
+  }
+  
+  // 自分自身のプロフィールか管理者かどうかをチェック
+  const isOwnProfile = userId === targetUserId;
+  const userIsAdmin = await isAdmin();
+  
+  // 権限チェック（自分のプロフィールか管理者のみ編集可能）
+  if (!isOwnProfile && !userIsAdmin) {
+    // 権限がない場合は404を返す
+    notFound();
+  }
+  
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-8 prose prose-sm dark:prose-invert">
+
+      <Suspense fallback={<div>読み込み中...</div>}>
+        <ProfileClient mode="edit" targetUserId={targetUserId} />
+      </Suspense>
+    </div>
+  );
+}
+````
+
+## File: app/profile/[clerkId]/page.tsx
+````typescript
+import { Suspense } from 'react';
+import { notFound } from 'next/navigation';
+import { auth } from '@clerk/nextjs/server';
+import { createClient } from '@/lib/supabase/server';
+import ProfileClient from '../components/ProfileClient';
+import { isAdmin } from '@/lib/authUtils';
+
+export const metadata = {
+  title: 'プロフィール | 四季森',
+  description: 'ユーザープロフィール情報',
+};
+
+export default async function ProfilePage({ params }: { params: { clerkId: string } }) {
+  const { userId } = await auth();
+  const { clerkId } = await params;
+  const targetUserId = clerkId;
+  
+  // ユーザーが存在するか確認
+  const supabase = await createClient();
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('clerk_id', targetUserId)
+    .single();
+  
+  // ユーザーが見つからない場合は404
+  if (error || !user) {
+    notFound();
+  }
+  
+  // 自分自身のプロフィールか管理者かどうかをチェック
+  const isOwnProfile = userId === targetUserId;
+  const userIsAdmin = await isAdmin();
+  
+  // 権限チェック（自分のプロフィールか管理者のみアクセス可能）
+  if (!isOwnProfile && !userIsAdmin) {
+    // 権限がない場合は404を返す
+    notFound();
+  }
+  
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-8 prose prose-sm dark:prose-invert">
+      <h1 className="text-3xl font-bold mb-6">プロフィール</h1>
+      <Suspense fallback={<div>読み込み中...</div>}>
+        <ProfileClient mode="view" targetUserId={targetUserId} />
+      </Suspense>
+    </div>
+  );
 }
 ````
 
@@ -4130,53 +4123,6 @@ export type DeleteItemAlertProps = {
 };
 ````
 
-## File: types/profile.ts
-````typescript
-export type ProfileClientProps = {
-  mode: 'view' | 'edit' | 'create';
-};
-
-export type ProfileViewProps = {
-  userData: {
-    first_name: string;
-    last_name: string;
-    email: string;
-    phone: string;
-    bio?: string;
-    address?: string;
-  };
-};
-
-// データベースのユーザー型
-export type UserRecord = {
-  id: string;
-  clerk_id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  phone: string;
-  bio?: string;
-  address?: string;
-  created_at: string;
-  updated_at: string;
-};
-
-// コンポーネントのProps型
-export type ProfileFormProps = {
-  initialData?: Partial<UserRecord>;
-  onSuccess?: () => void;
-};
-
-// フォーム入力用の型定義
-export type ProfileFormData = {
-  firstName: string;
-  lastName: string;
-  phone: string;
-  bio: string;
-  address: string;
-};
-````
-
 ## File: types/types.ts
 ````typescript
 export type Achievement = {
@@ -4186,24 +4132,6 @@ export type Achievement = {
   alt: string
   date: string
 }
-````
-
-## File: types/user.ts
-````typescript
-// ユーザー型定義
-export type User = {
-  id: string;
-  clerkId: string;
-  firstName: string | null;
-  lastName: string | null;
-  email: string;
-  phone: string | null;
-  bio: string | null;
-  address: string | null;
-  isAdmin: boolean;
-  created_at: string;
-  updated_at: string;
-};
 ````
 
 ## File: .eslintrc.js
@@ -4386,6 +4314,124 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
+}
+````
+
+## File: app/admin/users/components/UserTableWrapper.tsx
+````typescript
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import type { User } from '@/types/user';
+
+
+
+export default function UserTableWrapper() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/admin/users');
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'ユーザーデータの取得中にエラーが発生しました');
+      }
+      
+      const data = await response.json();
+      setUsers(data);
+    } catch (error: unknown) {
+      console.error('ユーザーデータ取得エラー:', error);
+      setError(error instanceof Error ? error.message : 'ユーザーデータの取得中にエラーが発生しました');
+      toast.error(error instanceof Error ? error.message : 'ユーザーデータの取得中にエラーが発生しました');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+  
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold">ユーザー一覧</h2>
+        <Button onClick={() => fetchUsers()} variant="outline" size="sm">
+          更新
+        </Button>
+      </div>
+      
+      {loading ? (
+        <div className="py-8 text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
+          <p className="mt-2 text-sm text-muted-foreground">ユーザーデータを読み込み中...</p>
+        </div>
+      ) : error ? (
+        <div className="py-8 text-center">
+          <p className="text-destructive">{error}</p>
+          <Button onClick={() => fetchUsers()} className="mt-4">再試行</Button>
+        </div>
+      ) : users.length === 0 ? (
+        <div className="py-8 text-center border rounded-md">
+          <p className="text-muted-foreground">ユーザーが見つかりませんでした</p>
+        </div>
+      ) : (
+        <div className="border rounded-md">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>名前</TableHead>
+                <TableHead>メール</TableHead>
+                <TableHead>登録日</TableHead>
+                <TableHead>操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>
+                    {user.lastName} {user.firstName}
+                  </TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    {user.created_at ? format(new Date(user.created_at), 'yyyy年MM月dd日', { locale: ja }) : '不明'}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Button variant="outline" size="sm" asChild>
+                        {/* clerk_idまたはclerkIdのどちらかを使用 */}
+                        <Link href={`/profile/${user.clerk_id || user.clerkId}`}>詳細</Link>
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
 }
 ````
 
@@ -4900,6 +4946,75 @@ order_items {
 }
 ````
 
+## File: types/profile.ts
+````typescript
+export type ProfileClientProps = {
+  mode: 'view' | 'edit' | 'create';
+  targetUserId?: string; // 表示・編集対象のユーザーID
+};
+
+export type ProfileViewProps = {
+  userData: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
+    bio?: string;
+    address?: string;
+  };
+  targetUserId?: string; // 表示対象のユーザーID
+};
+
+// データベースのユーザー型
+export type UserRecord = {
+  id: string;
+  clerk_id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  bio?: string;
+  address?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// コンポーネントのProps型
+export type ProfileFormProps = {
+  initialData?: Partial<UserRecord>;
+  onSuccess?: () => void;
+  targetUserId?: string; // 編集対象のユーザーID
+};
+
+// フォーム入力用の型定義
+export type ProfileFormData = {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  bio: string;
+  address: string;
+};
+````
+
+## File: types/user.ts
+````typescript
+// ユーザー型定義
+export type User = {
+  id: string;
+  clerkId?: string;
+  clerk_id?: string; // APIレスポンスでは clerk_id の形式で返ってくる場合がある
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+  phone: string | null;
+  bio: string | null;
+  address: string | null;
+  isAdmin: boolean;
+  created_at: string;
+  updated_at: string;
+};
+````
+
 ## File: eslint.config.mjs
 ````
 import { dirname } from "node:path";
@@ -5066,86 +5181,6 @@ export default function Hero() {
 
   // サーバーサイドレンダリング時は基本的なコンテンツを返す
   return content
-}
-````
-
-## File: app/components/mobile-nav.tsx
-````typescript
-'use client'
-import { Button } from '@/components/ui/button'
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-  SheetTrigger
-} from '@/components/ui/sheet'
-import { navListItems } from '@/data/navigations'
-import { Menu } from 'lucide-react'
-import Link from 'next/link'
-import { useState, useEffect } from 'react'
-import { SignedIn } from '@clerk/nextjs'
-import { useIsAdmin } from '@/lib/hooks/useIsAdmin'
-
-export default function MobileNav() {
-  const [open, setOpen] = useState(false)
-  const [mounted, setMounted] = useState(false)
-  const { isAdmin, isLoading } = useIsAdmin()
-
-  // クライアントサイドのみで実行
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  // サーバーサイドとクライアントサイドで一貫したコンテンツ
-  const mobileMenuButton = (
-    <Button size='icon' variant='outline'>
-      <Menu size={18} />
-    </Button>
-  )
-
-  // サーバーサイドレンダリング時は最小限の構造のみを返す
-  if (!mounted) {
-    return mobileMenuButton
-  }
-
-  // クライアントサイドでのみ完全なメニューを表示
-  return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        {mobileMenuButton}
-      </SheetTrigger>
-      <SheetContent>
-        <SheetTitle>メニュー</SheetTitle>
-        <ul className='flex list-none flex-col'>
-          {navListItems.map(item => (
-            <li key={item.href} className='my-2'>
-              <Button variant='ghost' asChild onClick={() => setOpen(false)}>
-                <Link href={item.href}>{item.label}</Link>
-              </Button>
-            </li>
-          ))}
-          {/* 管理者リンクの条件付き表示 */}
-          <SignedIn>
-            {mounted && !isLoading && isAdmin && (
-              <li className='my-2'>
-                <Button variant='ghost' asChild onClick={() => setOpen(false)}>
-                  <Link href='/admin'>管理</Link>
-                </Button>
-              </li>
-            )}
-          </SignedIn>
-        </ul>
-        <div className='grid grid-cols-2 gap-2 sticky top-full'>
-          <Button variant='ghost' asChild onClick={() => setOpen(false)}>
-            <Link href='/register'>登録</Link>
-          </Button>
-          <Button variant='ghost' asChild onClick={() => setOpen(false)}>
-            <Link href='/login'>ログイン</Link>
-          </Button>
-        </div>
-      </SheetContent>
-    </Sheet>
-  )
 }
 ````
 
@@ -5351,6 +5386,254 @@ export default function Page() {
 }
 ````
 
+## File: app/about/page.tsx
+````typescript
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: '四季守とは | 四季守',
+  description: '四季守の概要を説明します。',
+};
+
+export default function About() {
+  return (
+    <>
+      <div className='container mx-auto max-w-4xl mt-10 p-6 prose prose-sm dark:prose-invert'>
+        <h1>四季守とは</h1>
+        <p>
+          四季守は、四季の除雪と草刈りを行うサービスです。
+        </p>
+
+        <h2>概要</h2>
+        <p>
+          四季守は、重機によるプロフェッショナルな除雪・草刈りサービスです。個人宅から法人まで、幅広いニーズに対応し、安全・安心・快適な環境づくりに貢献します。
+        </p>
+
+        <h2>ブランドコンセプト</h2>
+        <p>「四季を彩り、暮らしを守る」</p>
+        <p>
+          四季折々の自然の美しさを守り、お客様の生活をサポートします。
+        </p>
+
+        <h2>サービス内容</h2>
+        <h3>重機による除雪サービス</h3>
+        <ul>
+          <li>
+            個人宅向け： 玄関先から駐車場までの除雪、雪かき、排雪など
+          </li>
+          <li>法人向け： 駐車場、通路、敷地内の除雪と排雪、雪堆積場の確保など</li>
+          <li>地域向け： 道路、公園、公共施設の除雪と排雪</li>
+        </ul>
+
+        <h3>重機による草刈りサービス</h3>
+        <ul>
+          <li>個人宅向け： 庭、空き地の草刈り、雑草処理、庭木の剪定など</li>
+          <li>法人向け： 敷地内の草刈り、雑草管理、緑地管理など</li>
+          <li>地域向け： 公園、河川敷、道路沿いの草刈り</li>
+        </ul>
+
+        <h2>強み</h2>
+        <ul>
+          <li>
+            プロフェッショナル:経験豊富な専門スタッフが、安全かつ効率的に作業を行います。
+          </li>
+          <li>重機: 最新の重機を導入し、短時間で広範囲の作業が可能です。</li>
+          <li>安心: 損害保険に加入しており、万が一の事故にも対応します。</li>
+          <li>
+            柔軟性:
+            お客様のニーズに合わせて、柔軟なサービスプランをご提案します。
+          </li>
+        </ul>
+
+        <h2>料金体系</h2>
+        <ul>
+          <li>個人宅向け: 定額制プラン、都度払いプラン</li>
+          <li>法人向け: 契約プラン、スポットプラン</li>
+          <li>地域向け: 協議</li>
+        </ul>
+
+        <h2>マーケティング戦略</h2>
+        <ul>
+          <li>ターゲット層: 個人宅、法人、地域</li>
+          <li>プロモーション: チラシ、DM、Web広告、SNS</li>
+          <li>
+            クロスセリング: 除雪・草刈り以外のサービスとの連携 (例:
+            庭木の剪定、害虫駆除)
+          </li>
+        </ul>
+
+        <h2>運営体制</h2>
+        <ul>
+          <li>専門スタッフ: 経験豊富なオペレーター、技術者</li>
+          <li>品質管理: 作業後の確認、定期的なメンテナンス</li>
+          <li>業務効率化: 作業計画の作成、人員配置の最適化</li>
+        </ul>
+
+        <h2>将来展開</h2>
+        <ul>
+          <li>フランチャイズ展開: 全国展開</li>
+          <li>サービス拡張: 樹木伐採、害虫駆除、庭のリフォームなど</li>
+          <li>地域展開: 地域密着型のサービス展開</li>
+        </ul>
+        
+        <h2>ブランド展開による効果</h2>
+        <ul>
+          <li>
+            多様な顧客ニーズへの対応: 個人宅、法人、地域など、幅広い顧客層に対応
+          </li>
+          <li>
+            収益機会の拡大: 除雪・草刈り以外のサービス展開による収益源の確保
+          </li>
+          <li>ブランド価値の向上: 高品質なサービス提供による信頼性向上</li>
+        </ul>
+
+        <h2>最後に</h2>
+        <p>
+          四季守は、お客様の暮らしをより快適にするために、常にサービスの向上に努めています。重機による除雪・草刈りサービスのことなら、ぜひ四季守にお任せください。
+        </p>
+      </div>
+    </>
+  )
+}
+````
+
+## File: app/components/mobile-nav.tsx
+````typescript
+'use client'
+import { Button } from '@/components/ui/button'
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetTrigger
+} from '@/components/ui/sheet'
+import { navListItems } from '@/data/navigations'
+import { Menu } from 'lucide-react'
+import Link from 'next/link'
+import { useState, useEffect } from 'react'
+import { SignedIn } from '@clerk/nextjs'
+import { useIsAdmin } from '@/lib/hooks/useIsAdmin'
+
+export default function MobileNav() {
+  const [open, setOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const { isAdmin, isLoading } = useIsAdmin()
+
+  // クライアントサイドのみで実行
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // サーバーサイドとクライアントサイドで一貫したコンテンツ
+  const mobileMenuButton = (
+    <Button size='icon' variant='outline'>
+      <Menu size={18} />
+    </Button>
+  )
+
+  // サーバーサイドレンダリング時は最小限の構造のみを返す
+  if (!mounted) {
+    return mobileMenuButton
+  }
+
+  // クライアントサイドでのみ完全なメニューを表示
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        {mobileMenuButton}
+      </SheetTrigger>
+      <SheetContent>
+        <SheetTitle>メニュー</SheetTitle>
+        <ul className='flex list-none flex-col'>
+          {navListItems.map(item => (
+            <li key={item.href} className='my-2'>
+              <Button variant='ghost' asChild onClick={() => setOpen(false)}>
+                <Link href={item.href}>{item.label}</Link>
+              </Button>
+            </li>
+          ))}
+          {/* 管理者リンクの条件付き表示 */}
+          <SignedIn>
+            {mounted && !isLoading && isAdmin && (
+              <li className='my-2'>
+                <Button variant='ghost' asChild onClick={() => setOpen(false)}>
+                  <Link href='/admin'>ダッシュボード</Link>
+                </Button>
+              </li>
+            )}
+          </SignedIn>
+        </ul>
+        <div className='grid grid-cols-2 gap-2 sticky top-full'>
+          <Button variant='ghost' asChild onClick={() => setOpen(false)}>
+            <Link href='/register'>登録</Link>
+          </Button>
+          <Button variant='ghost' asChild onClick={() => setOpen(false)}>
+            <Link href='/login'>ログイン</Link>
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+````
+
+## File: app/menu/page.tsx
+````typescript
+import { createClient } from '@/lib/supabase/server';
+import ItemCard from './components/ItemCard';
+import type { Item } from '@/types/item';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'メニュー | 四季守',
+  description: '当店で提供している美味しいメニューの一覧をご覧いただけます。',
+};
+
+export default async function Page() {
+  let items: Item[] | null = null;
+  let fetchError: string | null = null;
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('items')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+    items = data;
+  } catch (error) {
+    console.error('Error fetching items:', error);
+    fetchError = '商品の読み込み中にエラーが発生しました。';
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="heading2">メニュー一覧</h1>
+      <p className="text-sm text-muted-foreground mb-10">
+        以下の商品は、当店で提供している商品です。
+      </p>
+
+      {fetchError && <p className="text-red-500">{fetchError}</p>}
+
+      {!fetchError && (!items || items.length === 0) && (
+        <p>現在、表示できる商品はありません。</p>
+      )}
+
+      {items && items.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {items.map((item) => (
+            <ItemCard key={item.id} item={item} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+````
+
 ## File: app/profile/components/ProfileClient.tsx
 ````typescript
 'use client';
@@ -5364,7 +5647,7 @@ import ProfileForm from './ProfileForm';
 import { supabase } from '@/lib/supabase/client';
 import type { ProfileClientProps } from '@/types/profile';
 
-export default function ProfileClient({ mode }: ProfileClientProps) {
+export default function ProfileClient({ mode, targetUserId }: ProfileClientProps) {
   const { user, isLoaded } = useUser();
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<{
@@ -5382,7 +5665,10 @@ export default function ProfileClient({ mode }: ProfileClientProps) {
   const [needsCreate, setNeedsCreate] = useState(false);
 
   const fetchProfile = useCallback(async () => {
-    if (!user) return;
+    // 取得対象のユーザーIDを決定
+    const userIdToFetch = targetUserId || (user?.id ? user.id : null);
+    
+    if (!userIdToFetch) return;
     
     setLoading(true);
     
@@ -5391,7 +5677,7 @@ export default function ProfileClient({ mode }: ProfileClientProps) {
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
-        .eq('clerk_id', user.id)
+        .eq('clerk_id', userIdToFetch)
         .single();
       
       // ユーザーが存在しない場合は作成する
@@ -5409,7 +5695,7 @@ export default function ProfileClient({ mode }: ProfileClientProps) {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, targetUserId]);
 
   const createProfile = useCallback(async () => {
     if (!user || !needsCreate) return;
@@ -5523,15 +5809,15 @@ export default function ProfileClient({ mode }: ProfileClientProps) {
   }
 
   if (needsCreate || mode === 'create') {
-    return <ProfileForm onSuccess={fetchProfile} />;
+    return <ProfileForm onSuccess={fetchProfile} targetUserId={targetUserId || user?.id} />;
   }
 
   if (mode === 'edit' && userData) {
-    return <ProfileForm initialData={userData} onSuccess={fetchProfile} />;
+    return <ProfileForm initialData={userData} onSuccess={fetchProfile} targetUserId={targetUserId || user?.id} />;
   }
 
   if (userData) {
-    return <ProfileView userData={userData} />;
+    return <ProfileView userData={userData} targetUserId={targetUserId || user?.id} />;
   }
 
   return (
@@ -5556,11 +5842,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useIsAdmin } from '@/lib/hooks/useIsAdmin';
 import { supabase } from '@/lib/supabase/client';
 import type { ProfileFormData, ProfileFormProps } from '@/types/profile';
 
-export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps) {
+export default function ProfileForm({ initialData, onSuccess, targetUserId }: ProfileFormProps) {
   const { user } = useUser();
+  const { isAdmin } = useIsAdmin();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -5578,15 +5866,25 @@ export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps
    * プロフィール情報を更新する
    */
   const onSubmit = async (data: ProfileFormData) => {
-    if (!user) {
-      toast.error('ユーザー情報が取得できません');
+    // 編集対象のユーザーID（指定されていなければ現在のユーザー）
+    const userIdToUpdate = targetUserId || user?.id;
+    
+    if (!userIdToUpdate) {
+      toast.error('ユーザー情報が取得できませんでした');
       return;
     }
     
+    // 自分自身のプロフィールか管理者でない場合は編集不可
+    const isOwnProfile = user && user.id === userIdToUpdate;
+    if (!isOwnProfile && !isAdmin) {
+      toast.error('このプロフィールを編集する権限がありません');
+      return;
+    }
+
     setLoading(true);
-    
+
     try {
-      // データベース更新用のオブジェクトを作成
+      // 更新するデータを準備
       const updateData = {
         first_name: data.firstName,
         last_name: data.lastName,
@@ -5595,11 +5893,11 @@ export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps
         address: data.address,
         updated_at: new Date().toISOString(),
       };
-      
+
       const { error } = await supabase
         .from('users')
         .update(updateData)
-        .eq('clerk_id', user.id);
+        .eq('clerk_id', userIdToUpdate);
         
       if (error) {
         console.error('プロフィール更新エラー:', error.message);
@@ -5610,7 +5908,12 @@ export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps
       toast.success('プロフィールを更新しました');
       if (onSuccess) onSuccess();
       
-      router.push('/profile');
+      // ユーザー詳細ページに戻る
+      if (targetUserId) {
+        router.push(`/profile/${targetUserId}`);
+      } else {
+        router.push('/profile');
+      }
     } catch (error) {
       console.error('予期せぬエラー:', error);
       toast.error('予期せぬエラーが発生しました');
@@ -5620,24 +5923,10 @@ export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps
   };
 
   return (
-    <div className="max-w-4xl mx-auto mt-10 p-4 bg-white dark:bg-slate-900/20 rounded-lg shadow dark:shadow-slate-800/80">
-      <h1 className="heading2">プロフィール{initialData ? '編集' : '登録'}</h1>
+    <div className="max-w-4xl mt-10 mx-auto p-4 bg-white dark:bg-slate-900/20 rounded-lg shadow dark:shadow-slate-800/80">      <h1 className="heading2">プロフィール{initialData ? '編集' : '登録'}</h1>
       
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="firstName">名</Label>
-            <Input
-              id="firstName"
-              autoComplete='off'
-              {...register('firstName', { required: '名は必須です' })}
-              placeholder="名"
-            />
-            {errors.firstName && (
-              <p className="text-red-500 text-sm">{errors.firstName.message}</p>
-            )}
-          </div>
-          
           <div className="space-y-2">
             <Label htmlFor="lastName">姓</Label>
             <Input
@@ -5648,6 +5937,19 @@ export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps
             />
             {errors.lastName && (
               <p className="text-red-500 text-sm">{errors.lastName.message}</p>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="firstName">名</Label>
+            <Input
+              id="firstName"
+              autoComplete='off'
+              {...register('firstName', { required: '名は必須です' })}
+              placeholder="名"
+            />
+            {errors.firstName && (
+              <p className="text-red-500 text-sm">{errors.firstName.message}</p>
             )}
           </div>
         </div>
@@ -5688,7 +5990,14 @@ export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps
           <Button 
             type="button" 
             variant="outline" 
-            onClick={() => router.push('/profile')}
+            onClick={() => {
+              // キャンセル時はユーザー詳細ページに戻る
+              if (targetUserId) {
+                router.push(`/profile/${targetUserId}`);
+              } else {
+                router.push('/profile');
+              }
+            }}
           >
             キャンセル
           </Button>
@@ -5706,12 +6015,14 @@ export default function ProfileForm({ initialData, onSuccess }: ProfileFormProps
 ````typescript
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
+import { useIsAdmin } from '@/lib/hooks/useIsAdmin';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -5727,13 +6038,18 @@ import type { ProfileViewProps } from '@/types/profile';
 
 
 
-export default function ProfileView({ userData }: ProfileViewProps) {
-  const { user } = useUser();
+export default function ProfileView({ userData, targetUserId }: ProfileViewProps) {
+  const { user, isLoaded } = useUser();
+  const { isAdmin, isLoading: isAdminLoading } = useIsAdmin();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const handleDelete = async () => {
-    if (!user) return;
+    // 削除対象のユーザーID
+    const userIdToDelete = targetUserId || (user?.id ? user.id : null);
+    
+    if (!userIdToDelete) return;
     
     setLoading(true);
     
@@ -5741,14 +6057,16 @@ export default function ProfileView({ userData }: ProfileViewProps) {
       const { error } = await supabase
         .from('users')
         .delete()
-        .eq('clerk_id', user.id);
+        .eq('clerk_id', userIdToDelete);
         
       if (error) {
         console.log('Error deleting profile:', error);
         toast.error('プロフィールの削除に失敗しました');
       } else {
         toast.success('プロフィールを削除しました');
-        window.location.reload();
+        
+        // 管理者ダッシュボードのユーザー一覧ページにリダイレクト
+        router.push('/admin/users');
       }
     } catch (error) {
       console.log('Unexpected error:', error);
@@ -5763,7 +6081,7 @@ export default function ProfileView({ userData }: ProfileViewProps) {
       <div className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold">名前</h2>
-          <p>{userData.first_name} {userData.last_name}</p>
+          <p>{userData.last_name} {userData.first_name}</p>
         </div>
         
         <div>
@@ -5793,199 +6111,53 @@ export default function ProfileView({ userData }: ProfileViewProps) {
         )}
         
         <div className="pt-4 flex gap-4">
-          <Link href="/profile/edit">
-            <Button>プロフィールを編集</Button>
-          </Link>
+          {/* 編集ボタンはユーザー自身または管理者のみ表示 */}
+          {isLoaded && !isAdminLoading && (() => {
+            const isOwner = user && user.id === targetUserId;
+            const canEdit = isOwner || isAdmin;
+            
+            if (canEdit) {
+              return (
+                <Link href={targetUserId ? `/profile/${targetUserId}/edit` : '/profile/edit'}>
+                  <Button>プロフィールを編集</Button>
+                </Link>
+              );
+            }
+            return null;
+          })()}
           
-          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive">プロフィールを削除</Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>プロフィールを削除しますか？</AlertDialogTitle>
-                <AlertDialogDescription>
-                  この操作は取り消せません。プロフィール情報がすべて削除されます。
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} disabled={loading}>
-                  {loading ? '削除中...' : '削除する'}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {/* 削除ボタンはユーザー自身または管理者のみ表示 */}
+          {isLoaded && !isAdminLoading && (() => {
+            const isOwner = user && user.id === targetUserId;
+            const canDelete = isOwner || isAdmin;
+            
+            if (canDelete) {
+              return (
+                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive">プロフィールを削除</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>プロフィールを削除しますか？</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        この操作は取り消せません。プロフィール情報がすべて削除されます。
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDelete} disabled={loading}>
+                        {loading ? '削除中...' : '削除する'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              );
+            }
+            return null;
+          })()}
         </div>
       </div>
-    </div>
-  );
-}
-````
-
-## File: app/about/page.tsx
-````typescript
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: '四季守とは | 四季守',
-  description: '四季守の概要を説明します。',
-};
-
-export default function About() {
-  return (
-    <>
-      <div className='container mx-auto max-w-4xl mt-10 p-6 prose prose-sm dark:prose-invert'>
-        <h1>四季守とは</h1>
-        <p>
-          四季守は、四季の除雪と草刈りを行うサービスです。
-        </p>
-
-        <h2>概要</h2>
-        <p>
-          四季守は、重機によるプロフェッショナルな除雪・草刈りサービスです。個人宅から法人まで、幅広いニーズに対応し、安全・安心・快適な環境づくりに貢献します。
-        </p>
-
-        <h2>ブランドコンセプト</h2>
-        <p>「四季を彩り、暮らしを守る」</p>
-        <p>
-          四季折々の自然の美しさを守り、お客様の生活をサポートします。
-        </p>
-
-        <h2>サービス内容</h2>
-        <h3>重機による除雪サービス</h3>
-        <ul>
-          <li>
-            個人宅向け： 玄関先から駐車場までの除雪、雪かき、排雪など
-          </li>
-          <li>法人向け： 駐車場、通路、敷地内の除雪と排雪、雪堆積場の確保など</li>
-          <li>地域向け： 道路、公園、公共施設の除雪と排雪</li>
-        </ul>
-
-        <h3>重機による草刈りサービス</h3>
-        <ul>
-          <li>個人宅向け： 庭、空き地の草刈り、雑草処理、庭木の剪定など</li>
-          <li>法人向け： 敷地内の草刈り、雑草管理、緑地管理など</li>
-          <li>地域向け： 公園、河川敷、道路沿いの草刈り</li>
-        </ul>
-
-        <h2>強み</h2>
-        <ul>
-          <li>
-            プロフェッショナル:経験豊富な専門スタッフが、安全かつ効率的に作業を行います。
-          </li>
-          <li>重機: 最新の重機を導入し、短時間で広範囲の作業が可能です。</li>
-          <li>安心: 損害保険に加入しており、万が一の事故にも対応します。</li>
-          <li>
-            柔軟性:
-            お客様のニーズに合わせて、柔軟なサービスプランをご提案します。
-          </li>
-        </ul>
-
-        <h2>料金体系</h2>
-        <ul>
-          <li>個人宅向け: 定額制プラン、都度払いプラン</li>
-          <li>法人向け: 契約プラン、スポットプラン</li>
-          <li>地域向け: 協議</li>
-        </ul>
-
-        <h2>マーケティング戦略</h2>
-        <ul>
-          <li>ターゲット層: 個人宅、法人、地域</li>
-          <li>プロモーション: チラシ、DM、Web広告、SNS</li>
-          <li>
-            クロスセリング: 除雪・草刈り以外のサービスとの連携 (例:
-            庭木の剪定、害虫駆除)
-          </li>
-        </ul>
-
-        <h2>運営体制</h2>
-        <ul>
-          <li>専門スタッフ: 経験豊富なオペレーター、技術者</li>
-          <li>品質管理: 作業後の確認、定期的なメンテナンス</li>
-          <li>業務効率化: 作業計画の作成、人員配置の最適化</li>
-        </ul>
-
-        <h2>将来展開</h2>
-        <ul>
-          <li>フランチャイズ展開: 全国展開</li>
-          <li>サービス拡張: 樹木伐採、害虫駆除、庭のリフォームなど</li>
-          <li>地域展開: 地域密着型のサービス展開</li>
-        </ul>
-        
-        <h2>ブランド展開による効果</h2>
-        <ul>
-          <li>
-            多様な顧客ニーズへの対応: 個人宅、法人、地域など、幅広い顧客層に対応
-          </li>
-          <li>
-            収益機会の拡大: 除雪・草刈り以外のサービス展開による収益源の確保
-          </li>
-          <li>ブランド価値の向上: 高品質なサービス提供による信頼性向上</li>
-        </ul>
-
-        <h2>最後に</h2>
-        <p>
-          四季守は、お客様の暮らしをより快適にするために、常にサービスの向上に努めています。重機による除雪・草刈りサービスのことなら、ぜひ四季守にお任せください。
-        </p>
-      </div>
-    </>
-  )
-}
-````
-
-## File: app/menu/page.tsx
-````typescript
-import { createClient } from '@/lib/supabase/server';
-import ItemCard from './components/ItemCard';
-import type { Item } from '@/types/item';
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'メニュー | 四季守',
-  description: '当店で提供している美味しいメニューの一覧をご覧いただけます。',
-};
-
-export default async function Page() {
-  let items: Item[] | null = null;
-  let fetchError: string | null = null;
-
-  try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from('items')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      throw error;
-    }
-    items = data;
-  } catch (error) {
-    console.error('Error fetching items:', error);
-    fetchError = '商品の読み込み中にエラーが発生しました。';
-  }
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="heading2">メニュー一覧</h1>
-      <p className="text-sm text-muted-foreground mb-10">
-        以下の商品は、当店で提供している商品です。
-      </p>
-
-      {fetchError && <p className="text-red-500">{fetchError}</p>}
-
-      {!fetchError && (!items || items.length === 0) && (
-        <p>現在、表示できる商品はありません。</p>
-      )}
-
-      {items && items.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {items.map((item) => (
-            <ItemCard key={item.id} item={item} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -6130,55 +6302,6 @@ export default {
 } satisfies Config
 ````
 
-## File: app/contact/page.tsx
-````typescript
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'お問い合わせ | 四季守',
-  description: 'お問い合わせページです。',
-};
-
-export default function Page() {
-  return (
-    <div className='container prose prose-sm mx-auto p-6 dark:prose-invert'>
-      <p className='mt-10'>
-        お見積りのお問い合わせなどこちらからお問い合わせください。
-      </p>
-      <div className='mt-10 flex flex-col items-center justify-center gap-4 p-4'>
-        <div className='min-h-[721px] w-full max-w-2xl'>
-          <h2>お問い合わせ</h2>
-          <form
-            action='https://ssgform.com/s/uV0iqmPuFyP0'
-            method='post'
-            className='flex flex-col gap-4'
-          >
-            <label htmlFor='name' className='space-y-1'>
-              <span>お名前</span>
-              <Input type='text' name='name' id='name' required />
-            </label>
-            <label htmlFor='email' className='space-y-1'>
-              <span>メールアドレス</span>
-              <Input type='email' name='email' id='email' required />
-            </label>
-            <label htmlFor='message' className='space-y-1'>
-              <span>お問い合わせ内容</span>
-              <Textarea name='message' id='message' required />
-            </label>
-            <Button variant='default' type='submit'>
-              送信する
-            </Button>
-          </form>
-        </div>
-      </div>
-    </div>
-  )
-}
-````
-
 ## File: app/profile/page.tsx
 ````typescript
 import type { Metadata } from 'next';
@@ -6321,6 +6444,55 @@ export default async function Home() {
       {/* <Achievements /> */}
       {/* <Contact /> */}
     </main>
+  )
+}
+````
+
+## File: app/contact/page.tsx
+````typescript
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'お問い合わせ | 四季守',
+  description: 'お問い合わせページです。'
+}
+
+export default function Page() {
+  return (
+    <div className='container prose prose-sm mx-auto p-6 dark:prose-invert'>
+      <div className='mt-10 flex flex-col items-center justify-center gap-4 p-4'>
+        <div className='min-h-[721px] w-full max-w-2xl'>
+          <h1 className='heading2'>お問い合わせ</h1>
+          <p className='mb-10'>
+            お見積りのお問い合わせなどこちらからお問い合わせください。
+          </p>
+          <form
+            action='https://ssgform.com/s/uV0iqmPuFyP0'
+            method='post'
+            className='flex flex-col gap-4'
+          >
+            <label htmlFor='name' className='space-y-1'>
+              <span>お名前</span>
+              <Input type='text' name='name' id='name' required />
+            </label>
+            <label htmlFor='email' className='space-y-1'>
+              <span>メールアドレス</span>
+              <Input type='email' name='email' id='email' required />
+            </label>
+            <label htmlFor='message' className='space-y-1'>
+              <span>お問い合わせ内容</span>
+              <Textarea name='message' id='message' required />
+            </label>
+            <Button className='mt-4' variant='default' type='submit'>
+              送信する
+            </Button>
+          </form>
+        </div>
+      </div>
+    </div>
   )
 }
 ````
