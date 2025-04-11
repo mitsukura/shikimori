@@ -35,7 +35,7 @@ export function Testimonials() {
       <div className='mx-auto'>
         <div className='flex flex-col gap-10'>
           <h2 className='mx-auto text-center text-3xl font-bold tracking-tighter md:text-5xl lg:max-w-3xl px-10'>
-            多くの市民の方々から、もう一度お願いしたいというご希望も寄せられているようです
+            多くの市民の方々から、もう一度お願いしたいというご希望も寄せられています
           </h2>
           <Carousel setApi={setApi} className='w-full'>
             <CarouselContent>
