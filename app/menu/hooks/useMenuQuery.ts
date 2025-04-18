@@ -1,19 +1,21 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import type { Status, SortOrder } from "../constants/menuOptions";
+
+function isStatus(value: string | null): value is Status {
+  return value === "all" || value === "available" || value === "unavailable";
+}
 
 export function useMenuQuery() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const initialSortOrder = searchParams.get("order") === "asc" ? "asc" : "desc";
+  const initialSortOrder: SortOrder = searchParams.get("order") === "asc" ? "asc" : "desc";
   const statusParam = searchParams.get("status");
-  const initialStatus =
-    statusParam && ["all", "available", "unavailable"].includes(statusParam)
-      ? statusParam
-      : "all";
+  const initialStatus: Status = isStatus(statusParam) ? statusParam : "all";
 
-  const [sortOrder, setSortOrder] = useState<string>(initialSortOrder);
-  const [status, setStatus] = useState<string>(initialStatus);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(initialSortOrder);
+  const [status, setStatus] = useState<Status>(initialStatus);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());

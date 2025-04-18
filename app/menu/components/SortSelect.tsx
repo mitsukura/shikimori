@@ -1,14 +1,11 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type Option = {
-  value: string;
-  label: string;
-};
+import type { SortOrder, MenuSortOption } from "../constants/menuOptions";
 
 type Props = {
-  value: string;
-  onChange: (value: string) => void;
-  options: Option[];
+  value: SortOrder;
+  onChange: (value: SortOrder) => void;
+  options: readonly MenuSortOption[];
   id?: string;
   className?: string;
 };

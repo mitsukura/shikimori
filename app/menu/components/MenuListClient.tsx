@@ -7,15 +7,9 @@ import StatusToggleGroup from "./StatusToggleGroup";
 import ItemCard from "./ItemCard";
 import type { Item } from "@/types/item";
 
-const SORT_OPTIONS = [
-  { value: "desc", label: "新しい順" },
-  { value: "asc", label: "古い順" },
-];
-const STATUS_OPTIONS = [
-  { value: "all", label: "すべて" },
-  { value: "available", label: "販売中" },
-  { value: "unavailable", label: "準備中" },
-];
+import { SORT_OPTIONS, STATUS_OPTIONS } from "../constants/menuOptions";
+import type { SortOrder, Status } from "../constants/menuOptions";
+import { filterItems, sortItems } from "../utils/menuList";
 
 type Props = {
   items: Item[];
@@ -26,20 +20,10 @@ export default function MenuListClient({ items }: Props) {
 
   // ソート＆フィルタ済みリスト
   const filteredItems = useMemo(() => {
-    let list = [...items];
-    // フィルタ
-    if (status === "available") {
-      list = list.filter((item) => item.is_available);
-    } else if (status === "unavailable") {
-      list = list.filter((item) => !item.is_available);
-    }
-    // ソート
-    list.sort((a, b) => {
-      const dateA = new Date(a.created_at).getTime();
-      const dateB = new Date(b.created_at).getTime();
-      return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
-    });
-    return list;
+    return sortItems(
+      filterItems(items, status),
+      sortOrder
+    );
   }, [items, sortOrder, status]);
 
   return (

@@ -1,21 +1,18 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-type Option = {
-  value: string;
-  label: string;
-};
+import type { Status, MenuStatusOption } from "../constants/menuOptions";
 
 type Props = {
-  value: string;
-  onChange: (value: string) => void;
-  options: Option[];
+  value: Status;
+  onChange: (value: Status) => void;
+  options: readonly MenuStatusOption[];
   id?: string;
   className?: string;
 };
 
 export default function StatusToggleGroup({ value, onChange, options, id = "", className = "" }: Props) {
   return (
-    <ToggleGroup id={id} type="single" value={value} onValueChange={(v) => v && onChange(v)} className={className}>
+    <ToggleGroup id={id} type="single" value={value} onValueChange={(v) => v && onChange(v as Status)} className={className}>
       {options.map((opt) => (
         <ToggleGroupItem key={opt.value} value={opt.value} className="capitalize">
           {opt.label}
