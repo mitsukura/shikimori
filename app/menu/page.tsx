@@ -1,8 +1,8 @@
 
 import { createClient } from '@/lib/supabase/server';
-import ItemCard from './components/ItemCard';
 import type { Item } from '@/types/item';
 import type { Metadata } from 'next';
+import MenuListClient from './components/MenuListClient';
 
 export const metadata: Metadata = {
   title: 'メニュー | 四季守',
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  let items: Item[] | null = null;
+  let items: Item[] = [];
   let fetchError: string | null = null;
 
   try {
@@ -23,7 +23,7 @@ export default async function Page() {
     if (error) {
       throw error;
     }
-    items = data;
+    items = data || [];
   } catch (error) {
     console.error('Error fetching items:', error);
     fetchError = '商品の読み込み中にエラーが発生しました。';
@@ -43,11 +43,7 @@ export default async function Page() {
       )}
 
       {items && items.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {items.map((item) => (
-            <ItemCard key={item.id} item={item} />
-          ))}
-        </div>
+        <MenuListClient items={items} />
       )}
     </div>
   );
