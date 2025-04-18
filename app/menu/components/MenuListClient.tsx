@@ -2,8 +2,8 @@
 
 import { useMemo } from "react";
 import { useMenuQuery } from "../hooks/useMenuQuery";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import SortSelect from "./SortSelect";
+import StatusToggleGroup from "./StatusToggleGroup";
 import ItemCard from "./ItemCard";
 import type { Item } from "@/types/item";
 
@@ -48,26 +48,22 @@ export default function MenuListClient({ items }: Props) {
       <div className="flex flex-row gap-4 items-start md:items-end mb-8">
         <div>
           <label htmlFor="sort-select" className="hidden text-sm font-medium mb-1">作成日時で並び替え</label>
-          <Select value={sortOrder} onValueChange={setSortOrder}>
-            <SelectTrigger id="sort-select" className="w-36">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SORT_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SortSelect
+            value={sortOrder}
+            onChange={setSortOrder}
+            options={SORT_OPTIONS}
+            id="sort-select"
+            className="w-36"
+          />
         </div>
         <div>
           <label htmlFor="status-toggle" className="hidden text-sm font-medium mb-1">販売状態で絞り込み</label>
-          <ToggleGroup id="status-toggle" type="single" value={status} onValueChange={(v) => v && setStatus(v)}>
-            {STATUS_OPTIONS.map((opt) => (
-              <ToggleGroupItem key={opt.value} value={opt.value} className="capitalize">
-                {opt.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+          <StatusToggleGroup
+            value={status}
+            onChange={setStatus}
+            options={STATUS_OPTIONS}
+            id="status-toggle"
+          />
         </div>
       </div>
       {/* 商品リスト */}
