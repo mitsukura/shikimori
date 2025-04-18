@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useMemo } from "react";
+import { useMenuQuery } from "../hooks/useMenuQuery";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import ItemCard from "./ItemCard";
@@ -22,27 +22,7 @@ type Props = {
 };
 
 export default function MenuListClient({ items }: Props) {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  // クエリパラメータ初期値
-  const initialSortOrder = searchParams.get("order") === "asc" ? "asc" : "desc";
-  const statusParam = searchParams.get("status");
-const initialStatus =
-  statusParam && ["all", "available", "unavailable"].includes(statusParam)
-    ? statusParam
-    : "all";
-
-  const [sortOrder, setSortOrder] = useState<string>(initialSortOrder);
-  const [status, setStatus] = useState<string>(initialStatus);
-
-  // クエリパラメータを変更
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("sort", "created_at");
-    params.set("order", sortOrder);
-    params.set("status", status);
-    router.replace(`?${params.toString()}`);
-  }, [sortOrder, status, router, searchParams]);
+  const { sortOrder, setSortOrder, status, setStatus } = useMenuQuery();
 
   // ソート＆フィルタ済みリスト
   const filteredItems = useMemo(() => {
