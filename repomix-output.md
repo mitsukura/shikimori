@@ -69,12 +69,21 @@ app/
         route.ts
   components/
     Achievements.tsx
+    Avatoar.tsx
+    background-paths.tsx
     contact.tsx
+    Features.tsx
     Footer.tsx
     Header.tsx
+    Hero-section.tsx
     Hero.tsx
     mobile-nav.tsx
+    Newsletter-form.tsx
+    Newsletter.tsx
     Procedure.tsx
+    reature-section-with-hover-effects.tsx
+    Testimonial-section.tsx
+    Testimonials.tsx
   contact/
     page.tsx
   legalNotice/
@@ -109,6 +118,7 @@ components/
     badge.tsx
     button.tsx
     card.tsx
+    carousel.tsx
     checkbox.tsx
     dialog.tsx
     dropdown-menu.tsx
@@ -127,14 +137,6 @@ docs/
   create_tables.sql
   er.md
   insert_sample_data.sql
-knowledge/
-  clerkSupabaseSyncError.md
-  HydrationError.md
-  ReactHooksLintErrors.md
-  site_status.md
-  supabase_rls_troubleshooting.md
-  TypeScriptLintErrors.md
-  user_registration_profile.md
 lib/
   hooks/
     useIsAdmin.ts
@@ -849,104 +851,6 @@ export default function AdminDashboardPage() {
 }
 ````
 
-## File: app/api/admin/items/[itemId]/route.ts
-````typescript
-import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { isAdmin } from '@/lib/authUtils';
-
-export async function GET(_request: Request, { params }: { params: { itemId: string } }) {
-  if (!(await isAdmin())) {
-    return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
-  }
-
-  const itemId = params.itemId;
-
-  try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from('items')
-      .select('*')
-      .eq('id', itemId)
-      .single();
-
-    if (error) throw error;
-
-    return NextResponse.json(data);
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : '予期せぬエラーが発生しました';
-    return new NextResponse(JSON.stringify({ error: errorMessage }), { status: 500 });
-  }
-}
-
-export async function PUT(request: Request, { params }: { params: { itemId: string } }) {
-  if (!(await isAdmin())) {
-    return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
-  }
-
-  const itemId = params.itemId;
-
-  try {
-    const body = await request.json();
-    
-    // 更新データの検証
-    if (!body || typeof body !== 'object') {
-      return new NextResponse(JSON.stringify({ error: '無効なリクエストデータ' }), { status: 400 });
-    }
-
-    // データベース用の更新オブジェクトを作成
-    const updateData = {
-      ...(body.name !== undefined && { name: body.name }),
-      ...(body.description !== undefined && { description: body.description }),
-      ...(body.price !== undefined && { price: body.price }),
-      ...(body.imageUrl !== undefined && { image_url: body.imageUrl }),
-      ...(body.category !== undefined && { category: body.category }),
-      ...(body.isAvailable !== undefined && { is_available: body.isAvailable }),
-      ...(body.stock !== undefined && { stock: body.stock }),
-      updated_at: new Date().toISOString()
-    };
-
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from('items')
-      .update(updateData)
-      .eq('id', itemId)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return NextResponse.json(data);
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : '予期せぬエラーが発生しました';
-    return new NextResponse(JSON.stringify({ error: errorMessage }), { status: 500 });
-  }
-}
-
-export async function DELETE(_request: Request, { params }: { params: { itemId: string } }) {
-  if (!(await isAdmin())) {
-    return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
-  }
-
-  const itemId = params.itemId;
-
-  try {
-    const supabase = await createClient();
-    const { error } = await supabase
-      .from('items')
-      .delete()
-      .eq('id', itemId);
-
-    if (error) throw error;
-
-    return NextResponse.json({ success: true });
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : '予期せぬエラーが発生しました';
-    return new NextResponse(JSON.stringify({ error: errorMessage }), { status: 500 });
-  }
-}
-````
-
 ## File: app/api/admin/items/route.ts
 ````typescript
 import { NextResponse } from 'next/server';
@@ -1153,6 +1057,178 @@ export async function GET(_request: Request) {
 }
 ````
 
+## File: app/components/Avatoar.tsx
+````typescript
+"use client"
+
+import * as React from "react"
+import * as AvatarPrimitive from "@radix-ui/react-avatar"
+
+import { cn } from "@/lib/utils"
+
+const Avatar = React.forwardRef<
+  React.ElementRef<typeof AvatarPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root>
+>(({ className, ...props }, ref) => (
+  <AvatarPrimitive.Root
+    ref={ref}
+    className={cn(
+      "relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full",
+      className,
+    )}
+    {...props}
+  />
+))
+Avatar.displayName = AvatarPrimitive.Root.displayName
+
+const AvatarImage = React.forwardRef<
+  React.ElementRef<typeof AvatarPrimitive.Image>,
+  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
+>(({ className, ...props }, ref) => (
+  <AvatarPrimitive.Image
+    ref={ref}
+    className={cn("aspect-square h-full w-full", className)}
+    {...props}
+  />
+))
+AvatarImage.displayName = AvatarPrimitive.Image.displayName
+
+const AvatarFallback = React.forwardRef<
+  React.ElementRef<typeof AvatarPrimitive.Fallback>,
+  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Fallback>
+>(({ className, ...props }, ref) => (
+  <AvatarPrimitive.Fallback
+    ref={ref}
+    className={cn(
+      "flex h-full w-full items-center justify-center rounded-full bg-muted",
+      className,
+    )}
+    {...props}
+  />
+))
+AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName
+
+export { Avatar, AvatarImage, AvatarFallback }
+````
+
+## File: app/components/Features.tsx
+````typescript
+import React from "react";
+import { FeaturesSectionWithHoverEffects } from "./reature-section-with-hover-effects";
+
+function Features() {
+  return (
+    <div className="w-full">
+      <div>
+        <FeaturesSectionWithHoverEffects />
+      </div>
+    </div>
+  );
+}
+
+export { Features };
+````
+
+## File: app/components/Hero-section.tsx
+````typescript
+"use client";
+
+import { BackgroundPaths } from "./background-paths";
+
+export default function HeroSection() {
+    return <BackgroundPaths title="四季守" description="四季を通じて地域をサポートする重機除雪・草刈りサービス" />
+}
+````
+
+## File: app/components/Newsletter-form.tsx
+````typescript
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+
+export function NewsletterForm() {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+
+    setLoading(true);
+    
+    // ここで実際のニュースレター登録APIを呼び出します
+    // 例: await fetch('/api/newsletter', { method: 'POST', body: JSON.stringify({ email }) });
+    
+    // デモ用に遅延を追加
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    toast.success("ニュースレターに登録しました！", {
+      description: `${email}宛に確認メールを送信しました。`,
+    });
+    
+    setEmail("");
+    setLoading(false);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-[768px]">
+      <div className="space-y-2">
+        <div className="flex gap-2">
+          <Input
+            id="email"
+            type="email"
+            placeholder="your@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="flex-1"
+            disabled={loading}
+          />
+          <Button type="submit" disabled={loading}>
+            {loading ? "送信中..." : "登録する"}
+          </Button>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          登録することで、プライバシーポリシーに同意したことになります。
+        </p>
+      </div>
+    </form>
+  );
+}
+````
+
+## File: app/components/Newsletter.tsx
+````typescript
+import { NewsletterForm } from "./Newsletter-form";
+
+export default function Newsletter() {
+  return (
+    <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
+      <div className="container px-4 md:px-6 mx-auto">
+        <div className="flex flex-col items-center justify-center space-y-4 text-center"> 
+          <div className="space-y-2">
+            <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">
+              最新情報をお届けします
+            </h2>
+            <p className="max-w-[768px] text-muted-foreground md:text-sm/relaxed lg:text-sm/relaxed xl:text-base/relaxed">
+              四季守の最新ニュースや季節のお知らせ、地域情報などをお届けします。
+              いつでも登録解除できます。
+            </p>
+          </div>
+          <div className="w-full max-w-sm space-y-2">
+            <NewsletterForm />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+````
+
 ## File: app/components/Procedure.tsx
 ````typescript
 export default function Procedure() {
@@ -1194,6 +1270,134 @@ export default function Procedure() {
     </div>
   )
 }
+````
+
+## File: app/components/reature-section-with-hover-effects.tsx
+````typescript
+import { cn } from "@/lib/utils";
+import {
+  IconAdjustmentsBolt,
+  IconCloud,
+  IconCurrencyDollar,
+  IconEaseInOut,
+  IconHeart,
+  IconHelp,
+  IconRouteAltLeft,
+  IconTerminal2,
+} from "@tabler/icons-react";
+
+export function FeaturesSectionWithHoverEffects() {
+  const features = [
+    {
+      title: "法人顧客向け",
+      description:
+        "法人顧客向けの専門的な管理・コンサルティングサービス",
+      icon: <IconTerminal2 />,
+    },
+    {
+      title: "大規模施設向け",
+      description:
+        "大規模施設の管理に特化",
+      icon: <IconEaseInOut />,
+    },
+    {
+      title: "環境保全",
+      description:
+        "環境保全に配慮した庭園管理とエコフレンドリーな手法の導入",
+      icon: <IconCurrencyDollar />,
+    },
+    {
+      title: "エコフレンドリー",
+      description: "自然志向の顧客ニーズに対応したサービス展開",
+      icon: <IconCloud />,
+    },
+    {
+      title: "個人宅向け",
+      description: "個人宅向けの定期的な管理サービスと生活支援サービスとの連携",
+      icon: <IconRouteAltLeft />,
+    },
+    {
+      title: "会員制サービス",
+      description:
+        "会員制サービスによる継続的な顧客関係の構築",
+      icon: <IconAdjustmentsBolt />,
+    },
+    {
+      title: "季節に応じたケア",
+      description: "季節に応じた細やかなケアと暮らしのトータルサポート",
+      icon: <IconHeart />,
+    },
+  ];
+  return (
+    <div className="container mx-auto px-10 mt-40">
+      <h2 className="text-5xl font-bold tracking-tighter text-center">サービスの特徴</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4  relative z-10 py-10 max-w-7xl mx-auto">
+        {features.map((feature, index) => (
+          <Feature key={feature.title} {...feature} index={index} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const Feature = ({
+  title,
+  description,
+  icon,
+  index,
+}: {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  index: number;
+}) => {
+  return (
+    <div
+      className={cn(
+        "flex flex-col py-10 relative group/feature dark:border-neutral-800",
+        "w-full", // モバイルで全幅
+        "lg:w-auto lg:border-r", // デスクトップでは元のスタイル
+        (index === 0 || index === 4) && "lg:border-l dark:border-neutral-800",
+        index < 4 && "lg:border-b dark:border-neutral-800"
+      )}
+    >
+      {index < 4 && (
+        <div className="opacity-0 group-hover/feature:opacity-100 transition duration-200 absolute inset-0 h-full w-full bg-gradient-to-t from-neutral-100 dark:from-neutral-800 to-transparent pointer-events-none" />
+      )}
+      {index >= 4 && (
+        <div className="opacity-0 group-hover/feature:opacity-100 transition duration-200 absolute inset-0 h-full w-full bg-gradient-to-b from-neutral-100 dark:from-neutral-800 to-transparent pointer-events-none" />
+      )}
+      <div className="mb-4 relative z-10 px-10 text-neutral-600 dark:text-neutral-400">
+        {icon}
+      </div>
+      <div className="text-lg font-bold mb-2 relative z-10 px-10">
+        <div className="absolute left-0 inset-y-0 h-6 group-hover/feature:h-8 w-1 rounded-tr-full rounded-br-full bg-neutral-300 dark:bg-neutral-700 group-hover/feature:bg-blue-500 transition-all duration-200 origin-center" />
+        <span className="group-hover/feature:translate-x-2 transition duration-200 inline-block text-neutral-800 dark:text-neutral-100">
+          {title}
+        </span>
+      </div>
+      <p className="text-sm text-neutral-600 dark:text-neutral-300 max-w-xs relative z-10 px-10">
+        {description}
+      </p>
+    </div>
+  );
+};
+````
+
+## File: app/components/Testimonial-section.tsx
+````typescript
+import { Testimonials } from "./Testimonials";
+
+
+function TestimonialsSection() {
+  return (
+    <div className="block">
+      <Testimonials />
+    </div>
+  );
+}
+
+export { TestimonialsSection };
 ````
 
 ## File: app/profile/[clerkId]/edit/page.tsx
@@ -1701,6 +1905,272 @@ const CardFooter = React.forwardRef<
 CardFooter.displayName = "CardFooter"
 
 export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
+````
+
+## File: components/ui/carousel.tsx
+````typescript
+"use client"
+
+import * as React from "react"
+import useEmblaCarousel, {
+  type UseEmblaCarouselType,
+} from "embla-carousel-react"
+import { ArrowLeft, ArrowRight } from "lucide-react"
+
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+
+type CarouselApi = UseEmblaCarouselType[1]
+type UseCarouselParameters = Parameters<typeof useEmblaCarousel>
+type CarouselOptions = UseCarouselParameters[0]
+type CarouselPlugin = UseCarouselParameters[1]
+
+type CarouselProps = {
+  opts?: CarouselOptions
+  plugins?: CarouselPlugin
+  orientation?: "horizontal" | "vertical"
+  setApi?: (api: CarouselApi) => void
+}
+
+type CarouselContextProps = {
+  carouselRef: ReturnType<typeof useEmblaCarousel>[0]
+  api: ReturnType<typeof useEmblaCarousel>[1]
+  scrollPrev: () => void
+  scrollNext: () => void
+  canScrollPrev: boolean
+  canScrollNext: boolean
+} & CarouselProps
+
+const CarouselContext = React.createContext<CarouselContextProps | null>(null)
+
+function useCarousel() {
+  const context = React.useContext(CarouselContext)
+
+  if (!context) {
+    throw new Error("useCarousel must be used within a <Carousel />")
+  }
+
+  return context
+}
+
+const Carousel = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & CarouselProps
+>(
+  (
+    {
+      orientation = "horizontal",
+      opts,
+      setApi,
+      plugins,
+      className,
+      children,
+      ...props
+    },
+    ref
+  ) => {
+    const [carouselRef, api] = useEmblaCarousel(
+      {
+        ...opts,
+        axis: orientation === "horizontal" ? "x" : "y",
+      },
+      plugins
+    )
+    const [canScrollPrev, setCanScrollPrev] = React.useState(false)
+    const [canScrollNext, setCanScrollNext] = React.useState(false)
+
+    const onSelect = React.useCallback((api: CarouselApi) => {
+      if (!api) {
+        return
+      }
+
+      setCanScrollPrev(api.canScrollPrev())
+      setCanScrollNext(api.canScrollNext())
+    }, [])
+
+    const scrollPrev = React.useCallback(() => {
+      api?.scrollPrev()
+    }, [api])
+
+    const scrollNext = React.useCallback(() => {
+      api?.scrollNext()
+    }, [api])
+
+    const handleKeyDown = React.useCallback(
+      (event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === "ArrowLeft") {
+          event.preventDefault()
+          scrollPrev()
+        } else if (event.key === "ArrowRight") {
+          event.preventDefault()
+          scrollNext()
+        }
+      },
+      [scrollPrev, scrollNext]
+    )
+
+    React.useEffect(() => {
+      if (!api || !setApi) {
+        return
+      }
+
+      setApi(api)
+    }, [api, setApi])
+
+    React.useEffect(() => {
+      if (!api) {
+        return
+      }
+
+      onSelect(api)
+      api.on("reInit", onSelect)
+      api.on("select", onSelect)
+
+      return () => {
+        api?.off("select", onSelect)
+      }
+    }, [api, onSelect])
+
+    return (
+      <CarouselContext.Provider
+        value={{
+          carouselRef,
+          api: api,
+          opts,
+          orientation:
+            orientation || (opts?.axis === "y" ? "vertical" : "horizontal"),
+          scrollPrev,
+          scrollNext,
+          canScrollPrev,
+          canScrollNext,
+        }}
+      >
+        <div
+          ref={ref}
+          onKeyDownCapture={handleKeyDown}
+          className={cn("relative", className)}
+          role="region"
+          aria-roledescription="carousel"
+          {...props}
+        >
+          {children}
+        </div>
+      </CarouselContext.Provider>
+    )
+  }
+)
+Carousel.displayName = "Carousel"
+
+const CarouselContent = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => {
+  const { carouselRef, orientation } = useCarousel()
+
+  return (
+    <div ref={carouselRef} className="overflow-hidden">
+      <div
+        ref={ref}
+        className={cn(
+          "flex",
+          orientation === "horizontal" ? "-ml-4" : "-mt-4 flex-col",
+          className
+        )}
+        {...props}
+      />
+    </div>
+  )
+})
+CarouselContent.displayName = "CarouselContent"
+
+const CarouselItem = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => {
+  const { orientation } = useCarousel()
+
+  return (
+    <div
+      ref={ref}
+      role="group"
+      aria-roledescription="slide"
+      className={cn(
+        "min-w-0 shrink-0 grow-0 basis-full",
+        orientation === "horizontal" ? "pl-4" : "pt-4",
+        className
+      )}
+      {...props}
+    />
+  )
+})
+CarouselItem.displayName = "CarouselItem"
+
+const CarouselPrevious = React.forwardRef<
+  HTMLButtonElement,
+  React.ComponentProps<typeof Button>
+>(({ className, variant = "outline", size = "icon", ...props }, ref) => {
+  const { orientation, scrollPrev, canScrollPrev } = useCarousel()
+
+  return (
+    <Button
+      ref={ref}
+      variant={variant}
+      size={size}
+      className={cn(
+        "absolute  h-8 w-8 rounded-full",
+        orientation === "horizontal"
+          ? "-left-12 top-1/2 -translate-y-1/2"
+          : "-top-12 left-1/2 -translate-x-1/2 rotate-90",
+        className
+      )}
+      disabled={!canScrollPrev}
+      onClick={scrollPrev}
+      {...props}
+    >
+      <ArrowLeft className="h-4 w-4" />
+      <span className="sr-only">Previous slide</span>
+    </Button>
+  )
+})
+CarouselPrevious.displayName = "CarouselPrevious"
+
+const CarouselNext = React.forwardRef<
+  HTMLButtonElement,
+  React.ComponentProps<typeof Button>
+>(({ className, variant = "outline", size = "icon", ...props }, ref) => {
+  const { orientation, scrollNext, canScrollNext } = useCarousel()
+
+  return (
+    <Button
+      ref={ref}
+      variant={variant}
+      size={size}
+      className={cn(
+        "absolute h-8 w-8 rounded-full",
+        orientation === "horizontal"
+          ? "-right-12 top-1/2 -translate-y-1/2"
+          : "-bottom-12 left-1/2 -translate-x-1/2 rotate-90",
+        className
+      )}
+      disabled={!canScrollNext}
+      onClick={scrollNext}
+      {...props}
+    >
+      <ArrowRight className="h-4 w-4" />
+      <span className="sr-only">Next slide</span>
+    </Button>
+  )
+})
+CarouselNext.displayName = "CarouselNext"
+
+export {
+  type CarouselApi,
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselPrevious,
+  CarouselNext,
+}
 ````
 
 ## File: components/ui/checkbox.tsx
@@ -2666,832 +3136,6 @@ INSERT INTO refunds (payment_id, amount) VALUES
 (1, 10000.00);
 ````
 
-## File: knowledge/clerkSupabaseSyncError.md
-````markdown
-# Clerkユーザー情報とSupabaseの同期エラー
-
-## 問題：「Error fetching user: {}」
-
-このエラーは、アプリケーション内でClerkで認証されたユーザー情報がSupabaseデータベースから取得できない場合に発生します。主に`profile/page.tsx`のようなページで、ユーザー情報を取得する際に表示されます。
-
-## 発生原因
-
-1. **ユーザーデータの不足**: Clerkで認証されたユーザーに対応するレコードがSupabaseの`users`テーブルに存在しない
-2. **Webhook設定の問題**: ClerkからSupabaseへのユーザー情報同期用のWebhookが正しく設定されていないか、動作していない
-3. **データベーステーブル構造の不一致**: テーブル名やカラム名が期待されるものと異なる
-4. **権限の問題**: Supabaseの権限設定によりデータにアクセスできない
-5. **クエリエラー**: Supabaseクエリの構文またはパラメーターが不正確
-
-## 解決策
-
-### 1. ユーザーレコードの自動作成
-
-```tsx
-// Clerkユーザーが存在するのにSupabaseに対応するレコードがない場合、自動作成する
-if (userError || !userData) {
-  console.log('User not found, creating new user record');
-  
-  // 基本的なユーザー情報を取得
-  const email = user.primaryEmailAddress?.emailAddress || '';
-  const firstName = user.firstName || '';
-  const lastName = user.lastName || '';
-  
-  // ユーザーを作成
-  const { data: newUser, error: createError } = await supabase
-    .from('users')
-    .insert({
-      clerk_id: user.id,
-      email,
-      first_name: firstName,
-      last_name: lastName,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    })
-    .select('id')
-    .single();
-  
-  // エラーハンドリング
-  if (createError || !newUser) {
-    console.error('Error creating user:', createError);
-    return;
-  }
-  
-  // 関連するプロフィールも作成する
-  // ...
-}
-```
-
-### 2. Webhookの設定確認
-
-1. Clerk管理画面でWebhookが設定されていることを確認
-2. Webhook URLが正しく、アクセス可能であることを確認
-3. 環境変数`CLERK_WEBHOOK_SECRET`が設定されていることを確認
-4. Webhookイベント（`user.created`、`user.updated`など）が適切に設定されていることを確認
-
-### 3. エラーハンドリングの改善
-
-```tsx
-try {
-  // ユーザー情報取得
-  const { data: userData, error: userError } = await supabase
-    .from('users')
-    .select('id')
-    .eq('clerk_id', user.id)
-    .single();
-  
-  console.log('User data:', userData, 'User error:', userError);
-  
-  // エラーハンドリング
-  if (userError) {
-    // 詳細なエラー情報をログに記録
-    console.error('Specific error details:', userError.code, userError.message, userError.details);
-    // ...
-  }
-} catch (error) {
-  console.error('Unexpected error:', error);
-  // ...
-}
-```
-
-### 4. データベーステーブル構造の確認
-
-Supabaseの`users`テーブルが以下の構造を持つことを確認：
-
-- `id`: 主キー（通常はUUID、PostgreSQLで自動生成）
-- `clerk_id`: Clerkのユーザーを一意に識別するID
-- `email`: ユーザーのメールアドレス
-- `first_name`: ユーザーの名
-- `last_name`: ユーザーの姓
-- `created_at`: 作成日時
-- `updated_at`: 更新日時
-
-### 5. Webhookエンドポイントの実装例
-
-```tsx
-export async function POST(req: Request) {
-  // Webhookシークレットの検証
-  const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
-  if (!WEBHOOK_SECRET) {
-    throw new Error('Please add CLERK_WEBHOOK_SECRET from Clerk Dashboard to .env.local');
-  }
-
-  // リクエストの検証とイベント処理
-  // ...
-
-  if (eventType === 'user.created' || eventType === 'user.updated') {
-    const { id, email_addresses, first_name, last_name, phone_numbers } = evt.data;
-    const email = email_addresses[0]?.email_address;
-
-    try {
-      // Supabaseにユーザーを作成/更新
-      const { error } = await supabase
-        .from('users')
-        .upsert({
-          clerk_id: id,
-          email,
-          first_name: first_name || '',
-          last_name: last_name || '',
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'clerk_id'
-        });
-
-      if (error) {
-        console.error('Error upserting user:', error);
-        return new Response(`Error upserting user: ${error.message}`, { status: 500 });
-      }
-
-      return NextResponse.json({ success: true, event: eventType });
-    } catch (error) {
-      console.error('Error processing webhook:', error);
-      return new Response(`Error processing webhook: ${error}`, { status: 500 });
-    }
-  }
-}
-```
-
-## 推奨事項
-
-1. **エラーログの強化**: 詳細なエラー情報をコンソールに出力し、問題の解析を容易にする
-2. **段階的な対応**: まずはクエリが正しいか確認し、次にデータベース構造、最後にWebhook設定を確認する
-3. **テスト用のユーザー作成**: テスト用のClerkアカウントを作成し、Webhookが正しく動作していることを確認
-4. **フォールバックメカニズム**: ユーザーデータが見つからない場合の代替処理を実装
-
-## 結論
-
-「Error fetching user: {}」エラーは主にClerkとSupabaseの同期問題によって発生します。上記の解決策を実装することで、新規ユーザーでも初回ログイン時に自動的に必要なレコードが作成され、ユーザーエクスペリエンスの中断を防止できます。
-````
-
-## File: knowledge/HydrationError.md
-````markdown
-# Next.jsにおけるHydrationエラーの解決方法
-
-## 問題の概要
-
-メニューページにて以下のエラーが発生しました：
-
-```
-Hydration failed because the server rendered HTML didn't match the client. As a result this tree will be regenerated on the client.
-```
-
-このエラーは、サーバーサイドレンダリング（SSR）とクライアントサイドレンダリング（CSR）の出力が一致しない場合に発生します。Next.jsでは、サーバーで生成されたHTMLとクライアントでのレンダリング結果が完全に一致する必要があります。
-
-## 原因
-
-Hydrationエラーの主な原因として考えられるのは：
-
-1. クライアント側でのみ利用可能なAPIや変数を使用している
-2. 日付や時間のような環境依存の値を使用している
-3. ランダムな値や動的なコンテンツがある
-
-本プロジェクトでは、`Hero`コンポーネントがクライアントコンポーネント（`'use client'`）として定義されていましたが、サーバーサイドとクライアントサイドでのレンダリング結果が一致しない要素が含まれていました。
-
-## 解決策
-
-この問題を解決するために以下の手順を実施しました：
-
-1. `useState`と`useEffect`を使用して、コンポーネントのマウント状態を管理
-2. 初期レンダリング時（サーバーサイド）では最小限のプレースホルダーを表示
-3. クライアントサイドでマウント完了後に実際のコンテンツを表示
-
-具体的な実装は以下の通りです：
-
-```tsx
-'use client'
-
-import { useEffect, useState } from 'react'
-
-export default function Hero() {
-  // クライアントサイドのマウント状態を管理
-  const [isMounted, setIsMounted] = useState(false)
-
-  // コンポーネントがマウントされた後にのみtrueにする
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
-
-  // マウントされる前は最小限の構造を表示（サーバーサイドレンダリング時）
-  if (!isMounted) {
-    return <div className="min-h-[300px]">Loading...</div>
-  }
-
-  // クライアントサイドでのみ表示される実際のコンテンツ
-  return (
-    // 実際のコンポーネントの内容
-  )
-}
-```
-
-## メリット
-
-この解決策には以下のメリットがあります：
-
-1. サーバーサイドとクライアントサイドでのレンダリング結果の差異を防ぐ
-2. Hydrationエラーを解消
-3. ユーザー体験を向上（初期ローディング中にプレースホルダーを表示）
-
-## その他の解決策
-
-Hydrationエラーを解決するための他のアプローチとしては：
-
-1. `next/dynamic`を使用したコンポーネントの動的インポート（`{ ssr: false }`オプション付き）
-2. `suppressHydrationWarning`属性を使用する（HTMLの不一致を無視するため、推奨されない）
-3. フォーマットや日付表示に関する問題なら、特定のフォーマット関数を両環境で同じように動作するよう統一する
-
-## まとめ
-
-Hydrationエラーは、Next.jsでSSRとCSRを併用する際の一般的な問題です。とくにクライアント依存のAPIや環境依存の値を使用する場合に発生しやすいです。`useEffect`と`useState`を活用してコンポーネントのレンダリングを制御することで、この問題を効果的に解決できます。
-````
-
-## File: knowledge/ReactHooksLintErrors.md
-````markdown
-# React HooksとTypeScriptのLintエラー解決方法
-
-## 発生したエラー
-
-デプロイ時に以下のエラーが発生：
-
-```
-Failed to compile.
-./app/profile/page.tsx
-20:10  Error: 'profile' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-24:45  Error: 'formState' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-30:6  Warning: React Hook useEffect has a missing dependency: 'fetchProfile'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
-```
-
-## 原因
-
-1. 未使用変数の存在: `profile`変数と`formState`が定義されているが使用されていない
-2. React Hooksの依存配列の不備: `useEffect`で`fetchProfile`を使用しているが依存配列に含まれていない
-
-## 解決策
-
-### 1. 未使用変数の削除
-
-- `profile`変数を`useState`から削除
-- `formState`を`useForm`の分割代入から削除
-
-```tsx
-// 修正前
-const [profile, setProfile] = useState<ProfileFormData | null>(null);
-const { register, handleSubmit, setValue, formState } = useForm<ProfileFormData>();
-
-// 修正後
-const { register, handleSubmit, setValue } = useForm<ProfileFormData>();
-```
-
-### 2. `fetchProfile`関数の適切な処理
-
-`fetchProfile`関数は`useEffect`内で使用されているが、関数の位置と依存配列の問題がありました：
-
-#### 問題点
-- 関数がレンダリングごとに再作成される
-- 関数が宣言前に使用されている
-- `useEffect`の依存配列に関数が含まれていない
-
-#### 解決方法
-1. `useCallback`を使用して関数をメモ化
-2. 関数の宣言位置を`useEffect`の前に移動
-3. 関数内で使用している変数をすべて依存配列に追加
-
-```tsx
-// 修正前
-useEffect(() => {
-  if (user) {
-    fetchProfile();
-  }
-}, [user]);
-
-const fetchProfile = async () => {
-  // ...関数の実装
-};
-
-// 修正後
-const fetchProfile = useCallback(async () => {
-  // ...関数の実装
-}, [user, setValue]);
-
-useEffect(() => {
-  if (user) {
-    fetchProfile();
-  }
-}, [user, fetchProfile]);
-```
-
-## 重要なポイント
-
-### React Hooksの依存配列の扱い方
-
-1. **フックが使用するすべての変数を依存配列に含める**
-   - `useEffect`、`useCallback`、`useMemo`などのHooksは、依存配列内のいずれかの値が変更されたときに再実行される
-   - 依存配列に含まれていない値を使用すると、古い値を参照し続けるバグの原因になる
-
-2. **関数を依存配列に含める場合**
-   - コンポーネント内で定義された関数は毎回のレンダリングで再作成されるため、そのまま依存配列に含めると無限ループの原因になる
-   - `useCallback`を使ってメモ化することで、依存配列の値が変わらない限り関数の参照も変わらなくなる
-
-### Lintエラー防止のベストプラクティス
-
-1. 未使用変数は宣言しない
-2. React Hooksを使用する際は`eslint-plugin-react-hooks`のルールに従う
-3. コンポーネント内の関数で外部の状態を参照する場合は`useCallback`を使用
-4. Hooksの依存配列は慎重に設定し、必要なすべての依存関係を含める
-
-## 参考リンク
-
-- [React公式: フックのルール](https://ja.reactjs.org/docs/hooks-rules.html)
-- [ESLint: react-hooks](https://www.npmjs.com/package/eslint-plugin-react-hooks)
-- [React公式: useCallback](https://ja.reactjs.org/docs/hooks-reference.html#usecallback)
-- [TypeScript: 未使用変数](https://typescript-eslint.io/rules/no-unused-vars)
-````
-
-## File: knowledge/site_status.md
-````markdown
-# 四季守サイトの現状
-
-## プロジェクト概要
-四季守（Shikimori）は、Next.js 15を使用して開発されたWebアプリケーションです。ユーザー認証、プロフィール管理などの機能を提供することを目的としています。
-
-## 技術スタック
-- **フレームワーク**: Next.js 15.1.4
-- **言語**: TypeScript
-- **UIライブラリ**: React 19
-- **スタイリング**: Tailwind CSS
-- **認証**: Clerk
-- **データベース**: Supabase
-- **パッケージマネージャー**: Bun
-- **その他のライブラリ**:
-  - Radix UI（ダイアログ、スロットなどのコンポーネント）
-  - Lucide React（アイコン）
-  - React Hook Form（フォーム管理）
-  - Sonner（通知）
-  - Tailwind CSS関連 (class-variance-authority, tailwind-merge, tailwindcss-animate)
-
-## プロジェクト構造
-- **app/**: Next.jsのApp Routerを使用したページとコンポーネント
-  - components/: ページ内で使用するコンポーネント
-  - api/: APIエンドポイント
-  - about/:「About」ページ
-  - contact/:「お問い合わせ」ページ
-  - legalNotice/:「法的通知」ページ
-  - menu/: メニューページ
-  - privacy/: プライバシーポリシーページ
-  - profile/: ユーザープロフィールページ
-- **components/**: 共通UIコンポーネント
-- **data/**: ナビゲーションなどの静的データ
-- **docs/**: プロジェクトドキュメント
-- **lib/**: ユーティリティ関数とヘルパー
-- **public/**: 静的アセット（画像など）
-
-## 現在の機能
-1. **認証システム**:
-   - Clerkを使用したユーザー登録・ログイン機能
-   - ユーザープロフィールの表示
-
-2. **UI要素**:
-   - ヘッダー（デスクトップ・モバイル対応のナビゲーション）
-   - フッター
-   - ヒーローセクション
-   - 実績セクション
-   - お問い合わせフォーム
-
-3. **レスポンシブデザイン**:
-   - モバイルとデスクトップ両方に対応したレイアウト
-
-## データモデル
-ERダイアグラムによると、以下のエンティティが計画されています：
-- ユーザー (users)
-- 注文 (orders)
-- 地図/作業場所 (maps)
-- 支払い (payments)
-- 返金 (refunds)
-
-これらのエンティティは相互に関連しており、ユーザーが注文し、注文には地図と支払いが関連付けられ、支払いには返金が関連付けられるという構造になっています。
-
-## 課題と今後の展開
-1. コメントアウトされたコードの存在（Headerコンポーネント内など）から、認証システムの実装やUIの詳細はまだ調整中である可能性があります。
-2. ERダイアグラムに示されているデータモデルが現在のアプリケーション機能とどのように統合されているかは、さらなる調査が必要です。
-3. 本番環境へのデプロイ方法については、READMEでは基本的なVercelでのデプロイが推奨されています。
-
-## 開発環境
-- 開発サーバーの起動： `bun dev`
-- ビルド： `bun build`
-- リント： `bun lint`
-
-## 注意点
-- Supabaseを使用していますが、具体的なテーブル構造やAPIエンドポイントの実装詳細は確認が必要です。
-- Clerkによる認証は実装されていますが、権限管理や特定のユーザーロールについては確認が必要です。
-````
-
-## File: knowledge/supabase_rls_troubleshooting.md
-````markdown
-# Supabase RLS（Row Level Security）のトラブルシューティング
-
-## RLSとは
-
-Row Level Security（RLS）は、データベースの行レベルでセキュリティポリシーを適用する機能です。これにより、ユーザーは特定の条件を満たす行のみにアクセスできるようになります。Supabaseでは、デフォルトでRLSが有効になっており、適切なポリシーを設定しないとデータの読み書きができません。
-
-## 一般的なRLSエラー
-
-### 1. 新規レコード作成時のエラー
-
-```
-new row violates row-level security policy for table "テーブル名"
-```
-
-このエラーは、ユーザーが特定のテーブルに新しい行を挿入しようとしたときに、そのテーブルに対する`INSERT`権限がない場合に発生します。
-
-### 2. レコード更新時のエラー
-
-```
-update or delete on table "テーブル名" violates row-level security policy
-```
-
-このエラーは、ユーザーが行を更新または削除しようとしたときに、その行に対する`UPDATE`または`DELETE`権限がない場合に発生します。
-
-### 3. レコード読み取り時のエラー
-
-```
-permission denied for table "テーブル名"
-```
-
-このエラーは、ユーザーがテーブルからデータを読み取ろうとしたときに、そのテーブルに対する`SELECT`権限がない場合に発生します。
-
-## 対処法
-
-### 1. SQLエディターでポリシーを追加する
-
-もっとも一般的な解決策は、Supabaseダッシュボードの「SQL」セクションでSQLコマンドを使用してポリシーを追加することです。
-
-#### INSERTポリシーの追加例
-
-```sql
--- 認証されたユーザーが新しいレコードを作成できるようにする
-CREATE POLICY "認証ユーザーがレコードを作成できる" ON テーブル名
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (true);
-```
-
-#### SELECT/UPDATEポリシーの追加例
-
-```sql
--- ユーザーが自分のレコードのみを読み取り・更新できるようにする
-CREATE POLICY "ユーザーは自分のデータのみ閲覧・更新可能" ON テーブル名
-  FOR SELECT, UPDATE
-  TO authenticated
-  USING (user_id = auth.uid());
-```
-
-### 2. Supabaseダッシュボードで設定する
-
-Supabaseダッシュボードの「Authentication > Policies」セクションからGUIを使ってポリシーを設定することもできます。
-
-1. 対象のテーブルを選択
-2. 「New Policy」をクリック
-3. テンプレートを選択するか、カスタムポリシーを作成
-4. 権限（SELECT, INSERT, UPDATE, DELETE）を選択
-5. ポリシー条件を設定
-
-### 3. 一時的にRLSを無効化する（開発中のみ）
-
-開発中のみの対応策として、一時的にRLSを無効化することも可能です。
-
-```sql
--- RLSを一時的に無効化
-ALTER TABLE テーブル名 DISABLE ROW LEVEL SECURITY;
-
--- 作業が終わったらRLSを再度有効化
-ALTER TABLE テーブル名 ENABLE ROW LEVEL SECURITY;
-```
-
-⚠️ **注意**: 本番環境ではRLSを無効化しないでください。セキュリティ上のリスクがあります。
-
-### 4. サービスロールを使用する
-
-特定の操作のためにRLSをバイパスする必要がある場合、サービスロールを使用できます。ただし、これはサーバーサイドのコードでのみ使用してください。
-
-```typescript
-// supabase.ts
-import { createClient } from '@supabase/supabase-js';
-
-// 注意: サービスロールキーは公開しないでください
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-// RLSをバイパスするクライアント
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-```
-
-これを使って特定の操作を行うサーバーサイド関数を作成します。
-
-### 5. PostgreSQLロールとユーザー権限を理解する
-
-RLSの問題を根本的に解決するには、PostgreSQLのロールとユーザー権限システムを理解することが重要です：
-
-- `anon`: 未認証ユーザー用のロール
-- `authenticated`: 認証済みユーザー用のロール
-- `service_role`: すべての権限を持つスーパーユーザー
-
-## テーブル別のポリシー設定例
-
-### usersテーブルのポリシー例
-
-```sql
--- ユーザー自身のレコードのみ閲覧可能
-CREATE POLICY "ユーザーは自分のプロフィールのみ閲覧可能" ON users
-  FOR SELECT
-  TO authenticated
-  USING (id = auth.uid());
-
--- ユーザー自身のレコードのみ更新可能
-CREATE POLICY "ユーザーは自分のプロフィールのみ更新可能" ON users
-  FOR UPDATE
-  TO authenticated
-  USING (id = auth.uid());
-
--- 新規ユーザー作成を許可
-CREATE POLICY "新規ユーザー作成を許可" ON users
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (true);
-
--- 管理者はすべてのユーザーデータにアクセス可能
-CREATE POLICY "管理者はすべてのユーザーデータにアクセス可能" ON users
-  FOR ALL
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM users
-      WHERE users.id = auth.uid() AND users.is_admin = TRUE
-    )
-  );
-```
-
-## デバッグ方法
-
-RLSの問題をデバッグする際は、以下の手順が役立ちます：
-
-1. ログを確認: Supabaseダッシュボードの「Storage > Logs」でエラーを確認
-2. SQLエディターでポリシーを確認: `SELECT * FROM pg_policies WHERE tablename = 'テーブル名';`
-3. 一時的にRLSを無効化して問題が解決するか確認（開発環境のみ）
-4. 認証情報が正しく渡されているか確認
-
-## まとめ
-
-RLSはデータセキュリティのための重要な機能ですが、適切に設定しないとアプリケーションが正常に動作しなくなる可能性があります。エラーが発生した場合は、このドキュメントを参考にして適切なポリシーを設定してください。
-````
-
-## File: knowledge/TypeScriptLintErrors.md
-````markdown
-# TypeScript Lintエラー対応ガイド
-
-Next.jsプロジェクトでよく遭遇するTypeScriptのLintエラーとその解決方法についてまとめています。
-
-## 1. 未使用変数のエラー (`@typescript-eslint/no-unused-vars`)
-
-### 発生例
-
-```
-Error: 'profile' is assigned a value but never used. @typescript-eslint/no-unused-vars
-Error: 'errors' is assigned a value but never used. @typescript-eslint/no-unused-vars
-```
-
-### 原因
-
-変数やインポートを宣言したが、コード内で一度も使用していない場合に発生します。これはコードの品質を向上させるためのルールで、不要なメモリ使用や潜在的なバグを防ぐために重要です。
-
-### 対処法
-
-1. **変数が実際に不要な場合**：
-
-   変数定義を削除するか、使用しない変数の名前を`_`（アンダースコア）で始めることで、意図的に使用しないことを示します。
-
-   ```typescript
-   // 修正前
-   const { data, error } = await fetchData();
-   // error を使用していない場合の修正
-   const { data, _error } = await fetchData();
-   // または
-   const { data } = await fetchData();
-   ```
-
-2. **分割代入でのスキップ**：
-
-   オブジェクトから必要なプロパティのみを取り出します。
-
-   ```typescript
-   // 修正前
-   const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormData>();
-   // errorsを使用していない場合
-   const { register, handleSubmit, setValue, formState } = useForm<FormData>();
-   ```
-
-3. **変数が間接的に使用される場合**：
-
-   直接参照はなくても、関連するセッター関数が使用されている場合は変数を保持する必要があります。
-
-   ```typescript
-   // useState のセッターのみを使用しているケース
-   const [profile, setProfile] = useState(null);
-   // profile は直接参照されていなくても、setProfile が使用されている場合は削除しない
-   ```
-
-## 2. 未使用インポートのエラー
-
-### 発生例
-
-```
-Error: 'headers' is defined but never used. @typescript-eslint/no-unused-vars
-```
-
-### 原因
-
-モジュールをインポートしたが、コード内で一度も使用していない場合に発生します。
-
-### 対処法
-
-1. **インポート文の削除**：
-
-   ```typescript
-   // 修正前
-   import { Webhook } from 'svix';
-   import { headers } from 'next/headers';
-   import type { WebhookEvent } from '@clerk/nextjs/server';
-   
-   // 修正後（未使用のインポートを削除）
-   import { Webhook } from 'svix';
-   import type { WebhookEvent } from '@clerk/nextjs/server';
-   ```
-
-2. **インポートの仕方を変更**：
-
-   特定のプロパティだけを使用する場合は、インポート文を最適化します。
-
-   ```typescript
-   // 修正前（全体をインポート）
-   import * as React from 'react';
-   
-   // 修正後（必要なものだけをインポート）
-   import { useState, useEffect } from 'react';
-   ```
-
-## 3. 型定義エラー
-
-### 発生例
-
-```
-Type '{ children: string; }' is not assignable to type 'IntrinsicAttributes'
-```
-
-### 原因
-
-コンポーネントに渡すpropsの型が定義と一致していない場合に発生します。
-
-### 対処法
-
-1. **正しい型定義の作成**：
-
-   ```typescript
-   // コンポーネントの型定義
-   type ButtonProps = {
-     children: React.ReactNode;
-     onClick?: () => void;
-   };
-   
-   // 型を適用したコンポーネント
-   const Button: React.FC<ButtonProps> = ({ children, onClick }) => {
-     return <button onClick={onClick}>{children}</button>;
-   };
-   ```
-
-2. **オプショナルプロパティの活用**：
-
-   ```typescript
-   type ProfileProps = {
-     name: string;
-     bio?: string; // オプショナルプロパティ
-   };
-   ```
-
-## ベストプラクティス
-
-1. **コード書き込み前の検討**：
-   - 変数を宣言する前に、実際に使用するか考える
-   - 必要最小限のインポートのみを行う
-
-2. **定期的なLintチェック**：
-   - `npm run lint` または `bun run lint` でプロジェクト全体をチェック
-   - エディターにESLintプラグインを導入し、リアルタイムでエラーを確認
-
-3. **型安全性の確保**：
-   - 適切な型定義を行い、型の不一致を防ぐ
-   - `any` 型の使用を最小限に抑える
-
-4. **コードレビュー**：
-   - マージ前にLintエラーがないことを確認
-   - 自動チェックの仕組みをCI/CDに組み込む
-
-## トラブルシューティング
-
-1. **ルール違反の一時的な無効化**：
-   - 特定の行のみルールを無効化したい場合：
-     ```typescript
-     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-     const tempVar = calculateSomething();
-     ```
-
-2. **プロジェクト設定の調整**：
-   - `.eslintrc.js` でプロジェクト全体のルールをカスタマイズ：
-     ```javascript
-     module.exports = {
-       rules: {
-         '@typescript-eslint/no-unused-vars': ['error', { 
-           argsIgnorePattern: '^_',
-           varsIgnorePattern: '^_' 
-         }]
-       }
-     };
-     ```
-
-これらの対応を適切に行うことで、TypeScriptの型安全性を維持しながら、クリーンで効率的なコードベースを構築できます。
-````
-
-## File: knowledge/user_registration_profile.md
-````markdown
-# ユーザープロフィール登録機能について
-
-## 概要
-
-プロフィール登録画面からユーザー情報をSupabaseに登録する機能について説明します。この機能は`/app/profile/page.tsx`に実装されています。
-
-## 実装内容
-
-### テーブル構造
-
-Supabaseには以下のテーブルが利用されています：
-
-**users テーブル**
-   - id（PK）
-   - clerk_id（Clerkとの連携ID）
-   - email
-   - first_name
-   - last_name
-   - phone（電話番号）
-   - address（住所）
-   - created_at
-   - updated_at
-
-### フロー
-
-1. ユーザーがログインすると、Clerkから認証情報を取得
-2. `clerk_id`を使ってSupabaseの`users`テーブルを検索
-3. ユーザーが存在しない場合は新規作成し、基本情報を保存
-4. フォームにユーザー情報を表示
-5. ユーザーが情報を更新し、保存すると`users`テーブルを直接更新
-
-### フォーム項目
-
-プロフィールフォームでは以下の情報を編集できます：
-
-- **表示名**: 必須項目（編集不可、Clerkの`first_name`と`last_name`から自動生成）
-- **電話番号 (phone)**: 任意
-- **住所 (address)**: 任意
-
-### バリデーション
-
-- 表示名は必須項目として設定
-- React Hook Formを使用したフォーム管理とバリデーション
-
-### 実装のポイント
-
-1. **Clerk と Supabase の連携**：
-   - ClerkからユーザーIDを取得し、Supabaseのデータと紐づけ
-   - ユーザーが存在しない場合は自動的に作成
-   - 表示名は`first_name`と`last_name`から自動生成
-
-2. **エラーハンドリング**：
-   - API呼び出しのエラーをキャッチし、トーストメッセージで表示
-   - 不正な状態の回復処理
-
-3. **UI/UX**：
-   - レスポンシブデザイン（モバイル対応）
-   - 読み込み中の表示
-   - ボタンの無効化（処理中）
-
-## 注意点
-
-- ユーザー情報はClerk認証と連携していますが、拡張データ（電話番号、住所など）はSupabaseに保存
-- 基本的なユーザー情報（メールアドレス、名前）はClerkから自動取得され、Supabaseにも同期
-- 設計をシンプルにするため、プロフィール情報を別テーブルに分けず`users`テーブルに直接保存
-
-## 今後の拡張可能性
-
-- プロフィール画像のアップロード機能
-- 独自の表示名設定機能
-- より詳細なプロフィール情報の追加（プロフィールテーブルの導入検討）
-````
-
 ## File: lib/hooks/useIsAdmin.ts
 ````typescript
 'use client';
@@ -4246,46 +3890,6 @@ const config = {
 export default config;
 ````
 
-## File: README.md
-````markdown
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-
-## Getting Started
-
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-````
-
 ## File: tsconfig.json
 ````json
 {
@@ -4435,6 +4039,106 @@ export default function UserTableWrapper() {
 }
 ````
 
+## File: app/api/admin/items/[itemId]/route.ts
+````typescript
+import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { isAdmin } from '@/lib/authUtils';
+
+export async function GET(_request: Request, { params }: { params: { itemId: string } }) {
+  if (!(await isAdmin())) {
+    return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
+  }
+
+  // paramsを非同期的に処理
+  const { itemId } = await Promise.resolve(params);
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('items')
+      .select('*')
+      .eq('id', itemId)
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json(data);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : '予期せぬエラーが発生しました';
+    return new NextResponse(JSON.stringify({ error: errorMessage }), { status: 500 });
+  }
+}
+
+export async function PUT(request: Request, { params }: { params: { itemId: string } }) {
+  if (!(await isAdmin())) {
+    return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
+  }
+
+  // paramsを非同期的に処理
+  const { itemId } = await Promise.resolve(params);
+
+  try {
+    const body = await request.json();
+    
+    // 更新データの検証
+    if (!body || typeof body !== 'object') {
+      return new NextResponse(JSON.stringify({ error: '無効なリクエストデータ' }), { status: 400 });
+    }
+
+    // データベース用の更新オブジェクトを作成
+    const updateData = {
+      ...(body.name !== undefined && { name: body.name }),
+      ...(body.description !== undefined && { description: body.description }),
+      ...(body.price !== undefined && { price: body.price }),
+      ...(body.imageUrl !== undefined && { image_url: body.imageUrl }),
+      ...(body.category !== undefined && { category: body.category }),
+      ...(body.isAvailable !== undefined && { is_available: body.isAvailable }),
+      ...(body.stock !== undefined && { stock: body.stock }),
+      updated_at: new Date().toISOString()
+    };
+
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('items')
+      .update(updateData)
+      .eq('id', itemId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json(data);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : '予期せぬエラーが発生しました';
+    return new NextResponse(JSON.stringify({ error: errorMessage }), { status: 500 });
+  }
+}
+
+export async function DELETE(_request: Request, { params }: { params: { itemId: string } }) {
+  if (!(await isAdmin())) {
+    return new NextResponse(JSON.stringify({ error: '許可されていません' }), { status: 403 });
+  }
+
+  const itemId = params.itemId;
+
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from('items')
+      .delete()
+      .eq('id', itemId);
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : '予期せぬエラーが発生しました';
+    return new NextResponse(JSON.stringify({ error: errorMessage }), { status: 500 });
+  }
+}
+````
+
 ## File: app/api/webhook/clerk/route.ts
 ````typescript
 import { Webhook } from 'svix';
@@ -4579,6 +4283,172 @@ export default function Achievements() {
       </div>
     </>
   )
+}
+````
+
+## File: app/components/background-paths.tsx
+````typescript
+"use client";
+
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+
+function FloatingPaths({ position }: { position: number }) {
+    const paths = Array.from({ length: 36 }, (_, i) => ({
+        id: `path-${position}-${i}-${0.5 + i * 0.03}`,
+        index: i,
+        d: `M-${380 - i * 5 * position} -${189 + i * 6}C-${
+            380 - i * 5 * position
+        } -${189 + i * 6} -${312 - i * 5 * position} ${216 - i * 6} ${
+            152 - i * 5 * position
+        } ${343 - i * 6}C${616 - i * 5 * position} ${470 - i * 6} ${
+            684 - i * 5 * position
+        } ${875 - i * 6} ${684 - i * 5 * position} ${875 - i * 6}`,
+        color: `rgba(15,23,42,${0.1 + i * 0.03})`,
+        width: 0.5 + i * 0.03,
+    }));
+
+    return (
+        <div className="absolute inset-0 pointer-events-none">
+            <svg
+                className="w-full h-full text-slate-950 dark:text-white"
+                viewBox="0 0 696 316"
+                fill="none"
+            >
+                <title>Background Paths</title>
+                {paths.map((path) => (
+                    <motion.path
+                        key={path.id}
+                        d={path.d}
+                        stroke="currentColor"
+                        strokeWidth={path.width}
+                        strokeOpacity={0.1 + path.index * 0.03}
+                        initial={{ pathLength: 0.3, opacity: 0.6 }}
+                        animate={{
+                            pathLength: 1,
+                            opacity: [0.3, 0.6, 0.3],
+                            pathOffset: [0, 1, 0],
+                        }}
+                        transition={{
+                            duration: 20 + Math.random() * 10,
+                            repeat: Number.POSITIVE_INFINITY,
+                            ease: "linear",
+                        }}
+                    />
+                ))}
+            </svg>
+        </div>
+    );
+}
+
+export function BackgroundPaths({
+    title = "Background Paths",
+    description = "Background Paths",
+}: {
+    title?: string;
+    description?: string;
+}) {
+    const words = title.split(" ");
+
+    return (
+        <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-white dark:bg-neutral-950/0">
+            <div className="absolute inset-0">
+                <FloatingPaths position={1} />
+                <FloatingPaths position={-1} />
+            </div>
+
+            <div className="relative z-10 container mx-auto px-4 md:px-6 text-center">
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 2 }}
+                    className="max-w-4xl mx-auto"
+                >
+                    <h1 className="text-5xl sm:text-7xl md:text-8xl font-bold mb-8 tracking-widest heading-font">
+                        {words.map((word, wordIndex) => {
+                            // 単語の位置に基づいたユニークなキーを生成
+                            const uniqueKey = `word-${word}-${Math.random().toString(36).substring(2, 9)}`;
+                            return (
+                                <span
+                                    key={uniqueKey}
+                                    className="inline-block mr-4 last:mr-0"
+                                >
+                                {word.split("").map((letter, letterIndex) => {
+                                    // 文字のユニークなキーを生成
+                                    const letterKey = `letter-${word}-${letter}-${Math.random().toString(36).substring(2, 9)}`;
+                                    return (
+                                        <motion.span
+                                            key={letterKey}
+                                            initial={{ y: 100, opacity: 0 }}
+                                            animate={{ y: 0, opacity: 1 }}
+                                            transition={{
+                                                delay:
+                                                    wordIndex * 0.1 +
+                                                    letterIndex * 0.03,
+                                                type: "spring",
+                                                stiffness: 150,
+                                                damping: 25,
+                                            }}
+                                            className="inline-block text-transparent bg-clip-text 
+                                            bg-gradient-to-r from-neutral-900 to-neutral-700/80 
+                                            dark:from-white dark:to-white/80"
+                                        >
+                                            {letter}
+                                        </motion.span>
+                                    );
+                                })}
+                                </span>
+                            );
+                        })}
+                    </h1>
+
+                    <motion.p className="text-sm sm:text-lg md:text-xl font-bold mb-8 tracking-wider text-neutral-700 dark:text-neutral-300" style={{ letterSpacing: "0.05em" }}>
+                        {description.split('').map((char, index) => (
+                            <motion.span
+                                key={`desc-${index}-${char}`}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{
+                                    delay: 0.5 + index * 0.03,
+                                    duration: 0.5,
+                                    ease: "easeOut"
+                                }}
+                                className="inline-block"
+                            >
+                                {char === ' ' ? '\u00A0' : char}
+                            </motion.span>
+                        ))}
+                    </motion.p>
+
+                    <div
+                        className="inline-block group relative bg-gradient-to-b from-black/10 to-white/10 
+                        dark:from-white/10 dark:to-black/10 p-px rounded-2xl backdrop-blur-lg 
+                        overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300"
+                    >
+                        <Button
+                            variant="ghost"
+                            className="rounded-[1.15rem] px-8 py-6 text-lg font-semibold backdrop-blur-md 
+                            bg-white/95 hover:bg-white/100 dark:bg-black/95 dark:hover:bg-black/100 
+                            text-black dark:text-white transition-all duration-300 
+                            group-hover:-translate-y-0.5 border border-black/10 dark:border-white/10
+                            hover:shadow-md dark:hover:shadow-neutral-800/50"
+                        >
+                            <Link href="/menu" className="opacity-90 group-hover:opacity-100 transition-opacity">
+                                メニューを詳しく見る
+                            </Link>
+                            <span
+                                className="ml-3 opacity-70 group-hover:opacity-100 group-hover:translate-x-1.5 
+                                transition-all duration-300"
+                            >
+                                →
+                            </span>
+                        </Button>
+                    </div>
+                </motion.div>
+            </div>
+        </div>
+    );
 }
 ````
 
@@ -5184,6 +5054,84 @@ export default function Hero() {
 }
 ````
 
+## File: app/components/Testimonials.tsx
+````typescript
+'use client'
+
+import { useEffect, useState } from 'react'
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  type CarouselApi
+} from '@/components/ui/carousel'
+import { Avatar, AvatarFallback, AvatarImage } from './Avatoar'
+import { IconUser } from '@tabler/icons-react'
+
+export function Testimonials() {
+  const [api, setApi] = useState<CarouselApi>()
+  const [current, setCurrent] = useState(0)
+
+  useEffect(() => {
+    if (!api) {
+      return
+    }
+
+    setTimeout(() => {
+      if (api.selectedScrollSnap() + 1 === api.scrollSnapList().length) {
+        setCurrent(0)
+        api.scrollTo(0)
+      } else {
+        api.scrollNext()
+        setCurrent(current + 1)
+      }
+    }, 4000)
+  }, [api, current])
+
+  return (
+    <div className='w-full py-10 lg:py-20'>
+      <div className='mx-auto'>
+        <div className='flex flex-col gap-10'>
+          <h2 className='mx-auto text-center text-3xl font-bold tracking-tighter md:text-5xl lg:max-w-3xl px-10'>
+            多くの市民の方々から、もう一度お願いしたいというご希望も寄せられています
+          </h2>
+          <Carousel setApi={setApi} className='w-full'>
+            <CarouselContent>
+              {Array.from({ length: 15 }).map((_, index) => {
+                const uniqueKey = `testimonial-${index}-${Math.random().toString(36).substring(2, 9)}`
+                return (
+                  <CarouselItem className='lg:basis-1/2' key={uniqueKey}>
+                    <div className='flex aspect-video h-full flex-col justify-between rounded-md bg-muted p-6 lg:col-span-2'>
+                      <IconUser className='h-8 w-8 stroke-1' />
+                      <div className='flex flex-col gap-4'>
+                        <div className='flex flex-col'>
+                          <h3 className='text-xl tracking-tight'>丁寧な仕事</h3>
+                          <p className='max-w-xs text-base text-muted-foreground'>
+                            定期的な駐車場除雪と、施設内除草をお願いしています。時間通りに丁寧な仕事に感謝しております。
+                          </p>
+                        </div>
+                        <p className='flex flex-row items-center gap-2 text-sm'>
+                          <span className='text-muted-foreground'>By</span>{' '}
+                          <Avatar className='h-6 w-6'>
+                            <AvatarImage src='https://github.com/shadcn.png' />
+                            <AvatarFallback>CN</AvatarFallback>
+                          </Avatar>
+                          <span>株式会社雪草 秋田営業所 所長 山田 花子</span>
+                        </p>
+                      </div>
+                    </div>
+                  </CarouselItem>
+                )
+              })}
+            </CarouselContent>
+          </Carousel>
+        </div>
+      </div>
+    </div>
+  )
+}
+````
+
 ## File: app/legalNotice/page.tsx
 ````typescript
 import type { Metadata } from 'next';
@@ -5386,115 +5334,318 @@ export default function Page() {
 }
 ````
 
-## File: app/about/page.tsx
-````typescript
-import type { Metadata } from 'next';
+## File: README.md
+````markdown
+# 四季守 (Shikimori) 🌸
 
-export const metadata: Metadata = {
-  title: '四季守とは | 四季守',
-  description: '四季守の概要を説明します。',
-};
+> 四季を通じて地域をサポートする重機除雪・草刈りサービス。Next.js, Clerk, Supabase で構築された地域サポートプラットフォーム
 
-export default function About() {
-  return (
-    <>
-      <div className='container mx-auto max-w-4xl mt-10 p-6 prose prose-sm dark:prose-invert'>
-        <h1>四季守とは</h1>
-        <p>
-          四季守は、四季の除雪と草刈りを行うサービスです。
-        </p>
+## 📋 概要
 
-        <h2>概要</h2>
-        <p>
-          四季守は、重機によるプロフェッショナルな除雪・草刈りサービスです。個人宅から法人まで、幅広いニーズに対応し、安全・安心・快適な環境づくりに貢献します。
-        </p>
+四季守（Shikimori）は、秋田県内を中心とした除雪・草刈りサービスのオンライン予約・管理プラットフォームです。地域住民の除雪・草刈りの負担を軽減し、サービス提供業者とのマッチングを効率化することを目的としています。
 
-        <h2>ブランドコンセプト</h2>
-        <p>「四季を彩り、暮らしを守る」</p>
-        <p>
-          四季折々の自然の美しさを守り、お客様の生活をサポートします。
-        </p>
+### 主な機能
+- ユーザー向け: サービス閲覧、プロフィール管理、お問い合わせ、ニュースレター登録
+- 管理者向け: ユーザー管理、商品管理、注文管理
 
-        <h2>サービス内容</h2>
-        <h3>重機による除雪サービス</h3>
-        <ul>
-          <li>
-            個人宅向け： 玄関先から駐車場までの除雪、雪かき、排雪など
-          </li>
-          <li>法人向け： 駐車場、通路、敷地内の除雪と排雪、雪堆積場の確保など</li>
-          <li>地域向け： 道路、公園、公共施設の除雪と排雪</li>
-        </ul>
+## 🛠️ 技術スタック
 
-        <h3>重機による草刈りサービス</h3>
-        <ul>
-          <li>個人宅向け： 庭、空き地の草刈り、雑草処理、庭木の剪定など</li>
-          <li>法人向け： 敷地内の草刈り、雑草管理、緑地管理など</li>
-          <li>地域向け： 公園、河川敷、道路沿いの草刈り</li>
-        </ul>
+### フレームワーク・言語
+![Next.js](https://img.shields.io/badge/Next.js-15.1.4-black?style=flat&logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat&logo=typescript)
+![React](https://img.shields.io/badge/React-19.0.0-blue?style=flat&logo=react)
 
-        <h2>強み</h2>
-        <ul>
-          <li>
-            プロフェッショナル:経験豊富な専門スタッフが、安全かつ効率的に作業を行います。
-          </li>
-          <li>重機: 最新の重機を導入し、短時間で広範囲の作業が可能です。</li>
-          <li>安心: 損害保険に加入しており、万が一の事故にも対応します。</li>
-          <li>
-            柔軟性:
-            お客様のニーズに合わせて、柔軟なサービスプランをご提案します。
-          </li>
-        </ul>
+### UI
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4.1-38B2AC?style=flat&logo=tailwind-css&logoColor=white)
+![shadcn/ui](https://img.shields.io/badge/shadcn/ui-0.9.5-black?style=flat)
+![Radix UI](https://img.shields.io/badge/Radix_UI-multiple-black?style=flat)
+![Lucide React](https://img.shields.io/badge/Lucide_React-0.475.0-purple?style=flat)
+![Framer Motion](https://img.shields.io/badge/Framer_Motion-12.6.5-blue?style=flat&logo=framer)
+![Tabler Icons](https://img.shields.io/badge/Tabler_Icons-3.31.0-black?style=flat)
 
-        <h2>料金体系</h2>
-        <ul>
-          <li>個人宅向け: 定額制プラン、都度払いプラン</li>
-          <li>法人向け: 契約プラン、スポットプラン</li>
-          <li>地域向け: 協議</li>
-        </ul>
+### 状態管理/フォーム
+![React Hook Form](https://img.shields.io/badge/React_Hook_Form-7.54.2-EC5990?style=flat)
 
-        <h2>マーケティング戦略</h2>
-        <ul>
-          <li>ターゲット層: 個人宅、法人、地域</li>
-          <li>プロモーション: チラシ、DM、Web広告、SNS</li>
-          <li>
-            クロスセリング: 除雪・草刈り以外のサービスとの連携 (例:
-            庭木の剪定、害虫駆除)
-          </li>
-        </ul>
+### 認証/データベース
+![Clerk](https://img.shields.io/badge/Clerk-6.12.1-purple?style=flat)
+![Supabase](https://img.shields.io/badge/Supabase-2.49.1-3ECF8E?style=flat&logo=supabase)
+![Prisma](https://img.shields.io/badge/Prisma-6.5.0-2D3748?style=flat&logo=prisma)
 
-        <h2>運営体制</h2>
-        <ul>
-          <li>専門スタッフ: 経験豊富なオペレーター、技術者</li>
-          <li>品質管理: 作業後の確認、定期的なメンテナンス</li>
-          <li>業務効率化: 作業計画の作成、人員配置の最適化</li>
-        </ul>
+### その他
+![Bun](https://img.shields.io/badge/Bun-package_manager-F9F1E1?style=flat)
+![Sonner](https://img.shields.io/badge/Sonner-2.0.1-blue?style=flat)
+![date-fns](https://img.shields.io/badge/date--fns-4.1.0-yellow?style=flat)
+![svix](https://img.shields.io/badge/svix-1.60.1-orange?style=flat)
+![Embla Carousel](https://img.shields.io/badge/Embla_Carousel-8.6.0-pink?style=flat)
 
-        <h2>将来展開</h2>
-        <ul>
-          <li>フランチャイズ展開: 全国展開</li>
-          <li>サービス拡張: 樹木伐採、害虫駆除、庭のリフォームなど</li>
-          <li>地域展開: 地域密着型のサービス展開</li>
-        </ul>
-        
-        <h2>ブランド展開による効果</h2>
-        <ul>
-          <li>
-            多様な顧客ニーズへの対応: 個人宅、法人、地域など、幅広い顧客層に対応
-          </li>
-          <li>
-            収益機会の拡大: 除雪・草刈り以外のサービス展開による収益源の確保
-          </li>
-          <li>ブランド価値の向上: 高品質なサービス提供による信頼性向上</li>
-        </ul>
+## ✨ 機能一覧
 
-        <h2>最後に</h2>
-        <p>
-          四季守は、お客様の暮らしをより快適にするために、常にサービスの向上に努めています。重機による除雪・草刈りサービスのことなら、ぜひ四季守にお任せください。
-        </p>
-      </div>
-    </>
-  )
-}
+### ユーザー向け機能
+- ユーザー登録・ログイン (Clerk)
+- プロフィール表示・編集・削除
+- サービス（商品）一覧表示
+- サービス詳細表示
+- お問い合わせフォーム
+- ニュースレター登録
+- 特徴・サービス紹介セクション
+- テスティモニアル（お客様の声）表示
+- （将来実装予定: サービス予約、決済機能）
+
+### 管理者向け機能
+- 管理者ダッシュボード
+- ユーザー管理（一覧表示、詳細表示、編集）
+- 商品管理（一覧表示、CRUD操作）
+- 注文管理（将来実装予定）
+
+### 共通機能
+- ダークモード対応
+- レスポンシブデザイン
+- アニメーションエフェクト（Framer Motion）
+- カルーセル表示（Embla Carousel）
+
+## 📁 プロジェクト構造
+
+```
+shikimori/
+├── app/                  # Next.js App Routerのルートディレクトリ
+│   ├── api/              # APIエンドポイント
+│   │   ├── admin/        # 管理者用API
+│   │   └── webhook/      # Webhook処理
+│   ├── admin/            # 管理者向け画面
+│   │   ├── items/        # 商品管理
+│   │   └── users/        # ユーザー管理
+│   ├── about/            # 会社概要ページ
+│   ├── menu/             # サービスメニューページ
+│   ├── profile/          # ユーザープロフィール関連画面
+│   └── components/       # ページ固有のコンポーネント
+├── components/           # 共通UIコンポーネント (shadcn/uiベース)
+│   └── ui/               # shadcn/uiコンポーネント
+├── lib/                  # ユーティリティ、ヘルパー関数、カスタムフック
+│   ├── supabase/         # Supabase関連
+│   └── authUtils.ts      # 認証ユーティリティ
+├── prisma/               # Prismaスキーマ、マイグレーション、シードスクリプト
+├── public/               # 静的ファイル (画像、SVGなど)
+├── types/                # TypeScriptの型定義
+├── data/                 # ナビゲーションなどの静的データ
+└── docs/                 # ドキュメント (ER図など)
+```
+
+## 📊 データベーススキーマ (ER図)
+
+以下は初期（※）のデータベーススキーマをER図で表したものです：
+
+```mermaid
+erDiagram
+    users ||--o{ orders : "注文"
+    orders ||--|| maps : "作業場所"
+    orders ||--|| payments : "支払い"
+    payments ||--o| refunds : "返金"
+    orders ||--o{ order_items : "含む"
+    order_items }o--|| items : "参照"
+    
+    users {
+        UUID id PK
+        String clerk_id UK
+        Boolean is_admin
+        String first_name
+        String last_name
+        String email UK
+        String phone
+        String bio
+        String address
+        DateTime created_at
+        DateTime updated_at
+    }
+    
+    orders {
+        UUID id PK
+        UUID user_id FK
+        UUID map_id FK
+        UUID payment_id FK
+        DateTime order_date
+        String status
+        DateTime created_at
+        DateTime updated_at
+    }
+    
+    maps {
+        UUID id PK
+        String address
+        String name
+        String image
+        DateTime created_at
+        DateTime updated_at
+    }
+    
+    refunds {
+        UUID id PK
+        UUID payment_id FK
+        Decimal amount
+        DateTime refund_at
+        DateTime created_at
+        DateTime updated_at
+    }
+    
+    payments {
+        UUID id PK
+        String method
+        String status
+        String stripe_intent_id
+        Decimal stripe_authorized_amount
+        String stripe_authorizer_id
+        Decimal stripe_captured_amount
+        DateTime stripe_captured_at
+        DateTime created_at
+        DateTime updated_at
+    }
+    
+    items {
+        UUID id PK
+        String name
+        String description
+        Decimal price
+        String image_url
+        String category
+        Boolean is_available
+        Int stock
+        DateTime created_at
+        DateTime updated_at
+    }
+    
+    order_items {
+        UUID id PK
+        UUID order_id FK
+        UUID item_id FK
+        Int quantity
+        Decimal price_at_order
+        DateTime created_at
+        DateTime updated_at
+    }
+```
+
+### テーブル関連図の説明
+
+- **users**: ユーザー情報を管理するテーブル。Clerk認証と連携
+- **items**: 提供するサービス（商品）情報を管理するテーブル
+- **orders**: 注文情報を管理するテーブル。ユーザー、地図、支払い情報と関連
+- **maps**: 作業場所の情報を管理するテーブル
+- **payments**: 支払い情報を管理するテーブル
+- **refunds**: 返金情報を管理するテーブル
+- **order_items**: 注文に含まれる商品（サービス）の中間テーブル
+
+## 🚀 セットアップ手順
+
+### 前提条件
+- Node.js（v18以降推奨）
+- Bun (v1.x)
+- Git
+
+### インストール手順
+
+1. **リポジトリのクローン**
+```bash
+git clone <repository-url>
+cd shikimori
+```
+
+2. **依存関係のインストール**
+```bash
+bun install
+```
+
+3. **環境変数の設定**
+`.env.local` ファイルを作成し、以下の環境変数を設定します：
+```
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=
+CLERK_WEBHOOK_SECRET=
+
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+DATABASE_URL=
+
+# 任意: RLSバイパス用
+SUPABASE_SERVICE_ROLE_KEY=
+```
+
+4. **データベースマイグレーション**
+```bash
+bunx prisma migrate dev
+```
+
+5. **データベースシーディング (任意)**
+```bash
+bunx prisma db seed
+```
+
+6. **開発サーバーの起動**
+```bash
+bun dev
+```
+
+7. **アクセス**  
+ブラウザで http://localhost:3000 を開きます。
+
+## 📝 利用可能なスクリプト
+
+```bash
+# 開発サーバーを起動
+bun dev
+
+# 本番用にアプリケーションをビルド
+bun build
+
+# ビルドされたアプリケーションを起動
+bun start
+
+# ESLintを実行してコードをチェック
+bun lint
+
+# データベースにサンプルデータを投入
+bun db:seed
+# または
+bunx prisma db seed
+
+# Prismaマイグレーションを実行
+bunx prisma migrate dev
+
+# Prismaクライアントを生成
+bunx prisma generate
+```
+
+## 🌐 APIエンドポイント
+
+- `/api/admin/users` - ユーザー一覧取得・作成API
+- `/api/admin/users/[userId]` - 特定ユーザーの取得・更新・削除API
+- `/api/admin/items` - 商品一覧取得・作成API
+- `/api/admin/items/[itemId]` - 特定商品の取得・更新・削除API
+- `/api/webhook/clerk` - Clerk認証Webhook（ユーザー作成・更新・削除イベント処理）
+
+## 🚢 デプロイ
+
+四季守は [Vercel Platform](https://vercel.com) へのデプロイを推奨しています。
+
+### デプロイ手順
+
+1. [Vercel](https://vercel.com) にアカウントを作成します。
+2. プロジェクトをインポートします。
+3. 環境変数を設定します（セットアップ手順の環境変数と同じ）。
+4. デプロイボタンをクリックします。
+
+詳細は [Next.js デプロイドキュメント](https://nextjs.org/docs/app/building-your-application/deploying) を参照してください。
+
+## 📄 ライセンス
+
+<!-- ライセンス情報をここに追加 -->
+
+---
+
+四季守 (Shikimori) - 四季を通じて地域をサポートするサービス 🌸
+****
 ````
 
 ## File: app/components/mobile-nav.tsx
@@ -6163,57 +6314,6 @@ export default function ProfileView({ userData, targetUserId }: ProfileViewProps
 }
 ````
 
-## File: .gitignore
-````
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
-.env*
-.env.local
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-.windsurfrules
-
-# knowledge
-# /knowledge
-````
-
 ## File: tailwind.config.ts
 ````typescript
 import type { Config } from 'tailwindcss'
@@ -6302,6 +6402,107 @@ export default {
 } satisfies Config
 ````
 
+## File: app/about/page.tsx
+````typescript
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: '四季守とは | 四季守',
+  description: '四季守の概要を説明します。',
+};
+
+export default function About() {
+  return (
+    <>
+      <div className='container mx-auto max-w-4xl mt-10 p-6 prose prose-sm dark:prose-invert'>
+        <h1>四季守とは</h1>
+        <p>
+          四季守は、四季の除雪と草刈りを行うサービスです。
+        </p>
+
+        <h2>概要</h2>
+        <p>
+          四季守は、重機によるプロフェッショナルな除雪・草刈りサービスです。個人宅から法人まで、幅広いニーズに対応し、安全・安心・快適な環境づくりに貢献します。
+        </p>
+
+        <h2>ブランドコンセプト</h2>
+        <p>「四季を彩り、暮らしを守る」</p>
+        <p>
+          四季折々の自然の美しさを守り、お客様の生活をサポートします。
+        </p>
+
+        <h2>サービス内容</h2>
+        <h3>重機による除雪サービス</h3>
+        <ul>
+          <li>
+            個人宅向け： 玄関先から駐車場までの除雪、雪かき、排雪など
+          </li>
+          <li>法人向け： 駐車場、通路、敷地内の除雪と排雪、雪堆積場の確保など</li>
+          <li>地域向け： 道路、公園、公共施設の除雪と排雪</li>
+        </ul>
+
+        <h3>重機による草刈りサービス</h3>
+        <ul>
+          <li>個人宅向け： 庭、空き地の草刈り、雑草処理、庭木の剪定など</li>
+          <li>法人向け： 敷地内の草刈り、雑草管理、緑地管理など</li>
+          <li>地域向け： 公園、河川敷、道路沿いの草刈り</li>
+        </ul>
+
+        <h2>強み</h2>
+        <ul>
+          <li>
+            プロフェッショナル:経験豊富な専門スタッフが、安全かつ効率的に作業を行います。
+          </li>
+          <li>重機: 最新の重機を導入し、短時間で広範囲の作業が可能です。</li>
+          <li>安心: 損害保険に加入しており、万が一の事故にも対応します。</li>
+          <li>
+            柔軟性:
+            お客様のニーズに合わせて、柔軟なサービスプランをご提案します。
+          </li>
+        </ul>
+
+        <h2>料金体系</h2>
+        <ul>
+          <li>個人宅向け: 定額制プラン、都度払いプラン</li>
+          <li>法人向け: 契約プラン、スポットプラン</li>
+          <li>地域向け: 協議</li>
+        </ul>
+
+        <h2>運営体制</h2>
+        <ul>
+          <li>専門スタッフ: 経験豊富なオペレーター、技術者</li>
+          <li>品質管理: 作業後の確認、定期的なメンテナンス</li>
+          <li>業務効率化: 作業計画の作成、人員配置の最適化</li>
+        </ul>
+
+        <h2>将来展開</h2>
+        <ul>
+          <li>フランチャイズ展開: 全国展開</li>
+          <li>サービス拡張: 樹木伐採、害虫駆除、庭のリフォームなど</li>
+          <li>地域展開: 地域密着型のサービス展開</li>
+        </ul>
+        
+        <h2>ブランド展開による効果</h2>
+        <ul>
+          <li>
+            多様な顧客ニーズへの対応: 個人宅、法人、地域など、幅広い顧客層に対応
+          </li>
+          <li>
+            収益機会の拡大: 除雪・草刈り以外のサービス展開による収益源の確保
+          </li>
+          <li>ブランド価値の向上: 高品質なサービス提供による信頼性向上</li>
+        </ul>
+
+        <h2>最後に</h2>
+        <p>
+          四季守は、お客様の暮らしをより快適にするために、常にサービスの向上に努めています。重機による除雪・草刈りサービスのことなら、ぜひ四季守にお任せください。
+        </p>
+      </div>
+    </>
+  )
+}
+````
+
 ## File: app/profile/page.tsx
 ````typescript
 import type { Metadata } from 'next';
@@ -6323,11 +6524,114 @@ export default function ProfilePage() {
 }
 ````
 
+## File: .gitignore
+````
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+.env.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+.windsurfrules
+
+# knowledge
+/knowledge
+
+repomix-output.md
+````
+
+## File: app/contact/page.tsx
+````typescript
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'お問い合わせ | 四季守',
+  description: 'お問い合わせページです。'
+}
+
+export default function Page() {
+  return (
+    <div className='container prose prose-sm mx-auto p-6 dark:prose-invert'>
+      <div className='mt-10 flex flex-col items-center justify-center gap-4 p-4'>
+        <div className='min-h-[721px] w-full max-w-2xl'>
+          <h1 className='heading2'>お問い合わせ</h1>
+          <p className='mb-10'>
+            お見積りのお問い合わせなどこちらからお問い合わせください。
+          </p>
+          <form
+            action='https://ssgform.com/s/uV0iqmPuFyP0'
+            method='post'
+            className='flex flex-col gap-4'
+          >
+            <label htmlFor='name' className='space-y-1'>
+              <span>お名前</span>
+              <Input type='text' name='name' id='name' required />
+            </label>
+            <label htmlFor='email' className='space-y-1'>
+              <span>メールアドレス</span>
+              <Input type='email' name='email' id='email' required />
+            </label>
+            <label htmlFor='message' className='space-y-1'>
+              <span>お問い合わせ内容</span>
+              <Textarea name='message' id='message' required />
+            </label>
+            <Button className='mt-4' variant='default' type='submit'>
+              送信する
+            </Button>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}
+````
+
 ## File: app/globals.css
 ````css
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@200..900&display=swap');
 
 body{
 	@apply mx-auto bg-white text-black dark:bg-slate-950 dark:text-slate-100  
@@ -6335,6 +6639,13 @@ body{
 
 .heading2 {
   @apply text-3xl font-bold mb-4;
+}
+
+.heading-font {
+  font-family: "Noto Serif JP", serif;
+  font-optical-sizing: auto;
+  font-weight: 900;
+  font-style: italic;
 }
 
 @layer base {
@@ -6415,7 +6726,17 @@ body{
 ````typescript
 import { createClient } from '@/lib/supabase/server'
 
-import Hero from './components/Hero'
+import HeroSection from './components/Hero-section'
+import { Features } from './components/Features'
+import { TestimonialsSection } from './components/Testimonial-section'
+
+import type { Metadata } from 'next';
+import Newsletter from './components/Newsletter';
+
+export const metadata: Metadata = {
+  title: '四季守 トップページ',
+  description: '四季を通じて地域をサポートするサービス'
+};
 
 export default async function Home() {
   let data = null
@@ -6439,60 +6760,12 @@ export default async function Home() {
   }
 
   return (
-    <main className='container mx-auto max-w-4xl flex flex-col gap-16 px-6 py-12'>
-      <Hero />
-      {/* <Achievements /> */}
-      {/* <Contact /> */}
+    <main className='mx-auto flex flex-col gap-16'>
+      <HeroSection />
+      <Features />
+      <TestimonialsSection />
+      <Newsletter />
     </main>
-  )
-}
-````
-
-## File: app/contact/page.tsx
-````typescript
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import type { Metadata } from 'next'
-
-export const metadata: Metadata = {
-  title: 'お問い合わせ | 四季守',
-  description: 'お問い合わせページです。'
-}
-
-export default function Page() {
-  return (
-    <div className='container prose prose-sm mx-auto p-6 dark:prose-invert'>
-      <div className='mt-10 flex flex-col items-center justify-center gap-4 p-4'>
-        <div className='min-h-[721px] w-full max-w-2xl'>
-          <h1 className='heading2'>お問い合わせ</h1>
-          <p className='mb-10'>
-            お見積りのお問い合わせなどこちらからお問い合わせください。
-          </p>
-          <form
-            action='https://ssgform.com/s/uV0iqmPuFyP0'
-            method='post'
-            className='flex flex-col gap-4'
-          >
-            <label htmlFor='name' className='space-y-1'>
-              <span>お名前</span>
-              <Input type='text' name='name' id='name' required />
-            </label>
-            <label htmlFor='email' className='space-y-1'>
-              <span>メールアドレス</span>
-              <Input type='email' name='email' id='email' required />
-            </label>
-            <label htmlFor='message' className='space-y-1'>
-              <span>お問い合わせ内容</span>
-              <Textarea name='message' id='message' required />
-            </label>
-            <Button className='mt-4' variant='default' type='submit'>
-              送信する
-            </Button>
-          </form>
-        </div>
-      </div>
-    </div>
   )
 }
 ````
@@ -6608,11 +6881,9 @@ export default function Header() {
   const { isAdmin, isLoading } = useIsAdmin(); // 管理者判定フックを使用
   return (
     <header className='flex h-16 items-center justify-between border-b px-6'>
-      <h1 className='font-bold'>
-        <Button variant='ghost' asChild>
-          <Link href='/'>四季守</Link>
-        </Button>
-      </h1>
+      <Button variant='ghost' asChild>
+        <Link href='/' className="text-3xl font-bold text-black dark:text-white">四季守 | SHIKIMORI</Link>
+      </Button>
       <div className='flex-1' />
       <nav className='hidden md:block'>
         <ul className='flex list-none items-center'>
@@ -6707,6 +6978,7 @@ export default function Header() {
     "@prisma/client": "6.5.0",
     "@radix-ui/react-accordion": "^1.2.4",
     "@radix-ui/react-alert-dialog": "^1.1.6",
+    "@radix-ui/react-avatar": "^1.1.4",
     "@radix-ui/react-checkbox": "^1.1.4",
     "@radix-ui/react-dialog": "^1.1.6",
     "@radix-ui/react-dropdown-menu": "^2.1.7",
@@ -6715,6 +6987,7 @@ export default function Header() {
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.1",
+    "@tabler/icons-react": "^3.31.0",
     "@tailwindcss/typography": "^0.5.16",
     "add": "^2.0.6",
     "button": "^1.1.1",
@@ -6723,6 +6996,8 @@ export default function Header() {
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "dialog": "^0.3.1",
+    "embla-carousel-react": "^8.6.0",
+    "framer-motion": "^12.6.5",
     "lucide-react": "^0.475.0",
     "next": "15.1.4",
     "next-themes": "^0.4.6",
