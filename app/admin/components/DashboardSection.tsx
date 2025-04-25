@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-interface DashboardSectionProps {
+type DashboardSectionProps = {
   children: ReactNode;
   className?: string;
 }
