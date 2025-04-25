@@ -102,7 +102,7 @@ export default async function ItemDetailPage({ params }: Props) {
               <AccordionItem value="item-1">
                 <AccordionTrigger>サービスの対応エリアはどこですか？</AccordionTrigger>
                 <AccordionContent>
-                  現在、東京都、神奈川県、埼玉県、千葉県の一部地域で対応しております。詳細なエリアについては、お問い合わせください。
+                  現在、秋田県の県北部および周辺地域で対応しております。詳細なエリアについては、お問い合わせください。
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="item-2">
