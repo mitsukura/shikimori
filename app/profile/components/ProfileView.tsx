@@ -45,10 +45,10 @@ export default function ProfileView({ userData, targetUserId }: ProfileViewProps
         .eq('clerk_id', userIdToDelete);
         
       if (error) {
-        console.log('Error deleting profile:', error);
-        toast.error('プロフィールの削除に失敗しました');
+        console.log('Error deleting user:', error);
+        toast.error('ユーザーの削除に失敗しました');
       } else {
-        toast.success('プロフィールを削除しました');
+        toast.success('ユーザーを削除しました');
         
         // 管理者ダッシュボードのユーザー一覧ページにリダイレクト
         router.push('/admin/users');
@@ -95,7 +95,7 @@ export default function ProfileView({ userData, targetUserId }: ProfileViewProps
           </div>
         )}
         
-        <div className="pt-4 flex gap-4">
+        <div className="pt-4 flex flex-wrap gap-4">
           {/* 編集ボタンはユーザー自身または管理者のみ表示 */}
           {isLoaded && !isAdminLoading && (() => {
             const isOwner = user && user.id === targetUserId;
@@ -103,9 +103,11 @@ export default function ProfileView({ userData, targetUserId }: ProfileViewProps
             
             if (canEdit) {
               return (
-                <Link href={targetUserId ? `/profile/${targetUserId}/edit` : '/profile/edit'}>
-                  <Button>プロフィールを編集</Button>
-                </Link>
+                <Button asChild>
+                  <Link href={targetUserId ? `/profile/${targetUserId}/edit` : '/profile/edit'} className="no-underline">
+                    プロフィールを編集
+                  </Link>
+                </Button>
               );
             }
             return null;
@@ -120,13 +122,13 @@ export default function ProfileView({ userData, targetUserId }: ProfileViewProps
               return (
                 <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                   <AlertDialogTrigger asChild>
-                    <Button variant="destructive">プロフィールを削除</Button>
+                    <Button variant="destructive">ユーザーを削除</Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>プロフィールを削除しますか？</AlertDialogTitle>
+                      <AlertDialogTitle>ユーザーを削除しますか？</AlertDialogTitle>
                       <AlertDialogDescription>
-                        この操作は取り消せません。プロフィール情報がすべて削除されます。
+                        この操作は取り消せません。ユーザーアカウントと関連情報がすべて削除されます。
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -141,6 +143,13 @@ export default function ProfileView({ userData, targetUserId }: ProfileViewProps
             }
             return null;
           })()}
+          
+          {/* 管理者向け: ユーザー一覧へ戻るリンク */}
+          {isLoaded && !isAdminLoading && isAdmin && (
+            <Button variant="outline" asChild>
+              <Link href="/admin/users" className="no-underline">ユーザー一覧へ戻る</Link>
+            </Button>
+          )}
         </div>
       </div>
     </div>

@@ -16,7 +16,14 @@ export async function GET(_request: Request) {
 
     if (error) throw error;
 
-    return NextResponse.json(data);
+    // snake_caseからcamelCaseに変換
+    const mappedData = data.map((u) => ({
+      ...u,
+      firstName: u.first_name,
+      lastName: u.last_name,
+      isAdmin: u.is_admin,
+    }));
+    return NextResponse.json(mappedData);
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : '予期せぬエラーが発生しました';
     return new NextResponse(JSON.stringify({ error: errorMessage }), { status: 500 });
