@@ -31,7 +31,6 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     
-    // 必須フィールドの検証
     if (!body.name || typeof body.price !== 'number' || body.price < 0) {
       return new NextResponse(
         JSON.stringify({ error: '商品名と有効な価格が必要です' }), 
@@ -39,12 +38,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // 現在の日時を取得
     const now = new Date().toISOString();
     
-    // データベース用のオブジェクトを作成
     const itemData = {
-      id: crypto.randomUUID(), // UUIDを生成
+      id: crypto.randomUUID(),
       name: body.name,
       description: body.description || null,
       price: body.price,

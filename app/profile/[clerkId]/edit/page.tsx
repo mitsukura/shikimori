@@ -15,7 +15,6 @@ export default async function ProfileEditPage({ params }: { params: { clerkId: s
   const { clerkId } = await params;
   const targetUserId = clerkId;
   
-  // ユーザーが存在するか確認
   const supabase = await createClient();
   const { data: user, error } = await supabase
     .from('users')
@@ -23,18 +22,14 @@ export default async function ProfileEditPage({ params }: { params: { clerkId: s
     .eq('clerk_id', targetUserId)
     .single();
   
-  // ユーザーが見つからない場合は404
   if (error || !user) {
     notFound();
   }
   
-  // 自分自身のプロフィールか管理者かどうかをチェック
   const isOwnProfile = userId === targetUserId;
   const userIsAdmin = await isAdmin();
-  
-  // 権限チェック（自分のプロフィールか管理者のみ編集可能）
+    
   if (!isOwnProfile && !userIsAdmin) {
-    // 権限がない場合は404を返す
     notFound();
   }
   

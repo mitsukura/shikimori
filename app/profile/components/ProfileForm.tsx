@@ -51,7 +51,6 @@ export default function ProfileForm({ initialData, onSuccess, targetUserId }: Pr
     setLoading(true);
 
     try {
-      // 更新するデータを準備
       const updateData = {
         first_name: data.firstName,
         last_name: data.lastName,

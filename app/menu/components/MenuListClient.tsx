@@ -18,7 +18,6 @@ type Props = {
 export default function MenuListClient({ items }: Props) {
   const { sortOrder, setSortOrder, status, setStatus } = useMenuQuery();
 
-  // ソート＆フィルタ済みリスト
   const filteredItems = useMemo(() => {
     return sortItems(
       filterItems(items, status),

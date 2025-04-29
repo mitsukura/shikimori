@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { isAdmin } from '@/lib/authUtils'; // 管理者チェック
+import { isAdmin } from '@/lib/authUtils';
 
 export async function GET(_request: Request) {
   if (!(await isAdmin())) {
@@ -11,12 +11,11 @@ export async function GET(_request: Request) {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from('users')
-      .select('*') // 必要に応じてカラムを選択
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
 
-    // snake_caseからcamelCaseに変換
     const mappedData = data.map((u) => ({
       ...u,
       firstName: u.first_name,
