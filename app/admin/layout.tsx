@@ -11,7 +11,7 @@ export default async function AdminLayout({
   const isUserAdmin = await isAdmin();
 
   if (!isUserAdmin) {
-    redirect('/'); // 管理者でなければトップページなどにリダイレクト
+    redirect('/');
   }
 
   return (

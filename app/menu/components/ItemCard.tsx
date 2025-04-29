@@ -16,10 +16,8 @@ type ItemCardProps = {
 };
 
 export default function ItemCard({ item }: ItemCardProps) {
-  // 価格が数値であることを確認
   const priceNumber = typeof item.price === 'number' ? item.price : Number(item.price);
 
-  // 画像URLの処理: 相対パスの場合は先頭にスラッシュを追加
   const imageUrl = item.image_url
     ? item.image_url.startsWith('http') || item.image_url.startsWith('/')
       ? item.image_url

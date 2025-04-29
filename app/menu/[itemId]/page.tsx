@@ -32,7 +32,7 @@ export async function generateMetadata(
 
   return {
     title: item ? `${item.name} | メニュー | 四季守` : '商品詳細 | 四季守',
-    description: item?.description?.substring(0, 100) || '商品の詳細情報ページです。', // 説明を100文字に制限
+    description: item?.description?.substring(0, 100) || '商品の詳細情報ページです。',
   };
 }
 
@@ -44,11 +44,10 @@ export default async function ItemDetailPage({ params }: Props) {
     .from('items')
     .select('*')
     .eq('id', itemId)
-    .single<Item>(); // 型を指定
-
+    .single<Item>();
   if (error || !item) {
     console.error('Error fetching item or item not found:', error?.message);
-    notFound(); // 404ページをレンダリング
+    notFound();
   }
 
   const priceNumber = typeof item.price === 'number' ? item.price : Number(item.price);
@@ -56,7 +55,7 @@ export default async function ItemDetailPage({ params }: Props) {
     ? item.image_url.startsWith('http') || item.image_url.startsWith('/')
       ? item.image_url
       : `/${item.image_url}`
-    : '/placeholder-image.png'; // プレースホルダー画像が存在することを確認
+    : '/placeholder-image.png';
 
   return (
     <div className="container mx-auto px-4 py-8">

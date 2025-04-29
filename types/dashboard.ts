@@ -1,5 +1,3 @@
-// ダッシュボード関連の型定義を集約
-
 export type Stat = {
   label: string;
   value: string;

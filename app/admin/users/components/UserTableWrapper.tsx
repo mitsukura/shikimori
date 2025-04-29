@@ -75,8 +75,8 @@ export default function UserTableWrapper() {
           <p className="text-muted-foreground">ユーザーが見つかりませんでした</p>
         </div>
       ) : (
-        <div className="border rounded-md">
-          <Table>
+        <div className="border rounded-md overflow-x-auto">
+          <Table className="min-w-full whitespace-nowrap">
             <TableHeader>
               <TableRow>
                 <TableHead>名前</TableHead>

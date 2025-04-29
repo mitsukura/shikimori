@@ -23,18 +23,14 @@ export default async function ProfilePage({ params }: { params: { clerkId: strin
     .eq('clerk_id', targetUserId)
     .single();
   
-  // ユーザーが見つからない場合は404
   if (error || !user) {
     notFound();
   }
   
-  // 自分自身のプロフィールか管理者かどうかをチェック
   const isOwnProfile = userId === targetUserId;
   const userIsAdmin = await isAdmin();
   
-  // 権限チェック（自分のプロフィールか管理者のみアクセス可能）
   if (!isOwnProfile && !userIsAdmin) {
-    // 権限がない場合は404を返す
     notFound();
   }
   

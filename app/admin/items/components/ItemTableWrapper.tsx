@@ -93,30 +93,30 @@ export default function ItemTableWrapper() {
           <p className="text-muted-foreground">商品がありません。「新規作成」から商品を追加してください。</p>
         </div>
       ) : (
-        <div className="border rounded-lg overflow-hidden">
-          <Table>
+        <div className="border rounded-lg overflow-x-auto">
+          <Table className="min-w-full">
             <TableHeader>
               <TableRow>
-                <TableHead>商品名</TableHead>
-                <TableHead>価格</TableHead>
-                <TableHead>カテゴリ</TableHead>
-                <TableHead>在庫</TableHead>
-                <TableHead>販売状態</TableHead>
-                <TableHead className="text-right">操作</TableHead>
+                <TableHead className="whitespace-nowrap">商品名</TableHead>
+                <TableHead className="whitespace-nowrap">価格</TableHead>
+                <TableHead className="whitespace-nowrap">カテゴリ</TableHead>
+                <TableHead className="whitespace-nowrap">在庫</TableHead>
+                <TableHead className="whitespace-nowrap">販売状態</TableHead>
+                <TableHead className="text-right whitespace-nowrap">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {items.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.name}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-medium whitespace-nowrap">{item.name}</TableCell>
+                  <TableCell className="whitespace-nowrap">
                     {typeof item.price === 'number'
                       ? item.price.toLocaleString('ja-JP', { style: 'currency', currency: 'JPY' })
                       : Number(item.price).toLocaleString('ja-JP', { style: 'currency', currency: 'JPY' })}
                   </TableCell>
-                  <TableCell>{item.category || '-'}</TableCell>
-                  <TableCell>{item.stock}</TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">{item.category || '-'}</TableCell>
+                  <TableCell className="whitespace-nowrap">{item.stock}</TableCell>
+                  <TableCell className="whitespace-nowrap">
                     {item.is_available ? (
                       <div className="flex items-center">
                         <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
