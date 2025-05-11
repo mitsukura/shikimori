@@ -70,6 +70,9 @@ export default function Header() {
             <Link href='/admin'>ダッシュボード</Link>
           </Button>
         )}
+        <Button variant='ghost' asChild>
+          <Link href='/profile'>プロフィール</Link>
+        </Button>
       </SignedIn>
       <div className='md:hidden'>
         <MobileNav />

@@ -69,5 +69,8 @@
     "textlint": "^14.4.2",
     "textlint-rule-preset-jtf-style": "^3.0.2",
     "typescript": "^5"
+  },
+  "volta": {
+    "node": "22.15.0"
   }
 }
