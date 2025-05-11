@@ -26,10 +26,10 @@ model User {
   address   String?
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  
+
   // リレーション
-  orders    Order[]
-  
+  orders Order[]
+
   @@map("users")
 }
 
@@ -45,10 +45,10 @@ model Item {
   stock       Int      @default(0)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  
+
   // リレーション
-  orderItems  OrderItem[]
-  
+  orderItems OrderItem[]
+
   @@map("items")
 }
 
@@ -60,10 +60,10 @@ model Map {
   image     String?
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  
+
   // リレーション
-  orders    Order[]
-  
+  orders Order[]
+
   @@map("maps")
 }
 
@@ -79,11 +79,11 @@ model Payment {
   stripeCapturedAt       DateTime? @map("stripe_captured_at")
   createdAt              DateTime  @default(now()) @map("created_at")
   updatedAt              DateTime  @updatedAt @map("updated_at")
-  
+
   // リレーション
-  order                  Order?
-  refunds                Refund[]
-  
+  order   Order?
+  refunds Refund[]
+
   @@map("payments")
 }
 
@@ -97,13 +97,13 @@ model Order {
   status    String
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  
+
   // リレーション
-  user      User     @relation(fields: [userId], references: [id])
-  map       Map      @relation(fields: [mapId], references: [id])
-  payment   Payment  @relation(fields: [paymentId], references: [id])
+  user       User        @relation(fields: [userId], references: [id])
+  map        Map         @relation(fields: [mapId], references: [id])
+  payment    Payment     @relation(fields: [paymentId], references: [id])
   orderItems OrderItem[]
-  
+
   @@map("orders")
 }
 
@@ -116,11 +116,11 @@ model OrderItem {
   priceAtOrder Decimal  @map("price_at_order") @db.Decimal(10, 2)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
-  
+
   // リレーション
-  order        Order    @relation(fields: [orderId], references: [id])
-  item         Item     @relation(fields: [itemId], references: [id])
-  
+  order Order @relation(fields: [orderId], references: [id])
+  item  Item  @relation(fields: [itemId], references: [id])
+
   @@map("order_items")
 }
 
@@ -132,9 +132,36 @@ model Refund {
   refundAt  DateTime @default(now()) @map("refund_at")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  
+
   // リレーション
-  payment   Payment  @relation(fields: [paymentId], references: [id])
-  
+  payment Payment @relation(fields: [paymentId], references: [id])
+
   @@map("refunds")
+}
+
+/// 投稿（ブログ記事など）モデル
+model Post {
+  id         Int       @id @default(autoincrement())
+  title      String    // タイトル
+  content    String    // 本文
+  createdAt  DateTime  @default(now())      // 作成日時
+  updatedAt  DateTime  @updatedAt           // 更新日時
+
+  // 投稿者（Supabaseのauth.usersテーブルのUUIDを想定）
+  authorId   String
+
+  // カテゴリ（任意）
+  categoryId Int?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  @@map("posts") // Supabaseのテーブル名と一致させる
+}
+
+/// 投稿カテゴリモデル
+model Category {
+  id    Int    @id @default(autoincrement())
+  name  String @unique          // カテゴリ名（ユニーク）
+
+  // カテゴリに属する投稿一覧
+  posts Post[]
 }
