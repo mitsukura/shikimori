@@ -2,7 +2,6 @@ export const navListItems = [
   { label: '四季守とは', href: '/about' },
   { label: 'メニュー', href: '/menu' },
   { label: 'お問い合わせ', href: '/contact' },
-  { label: 'プロフィール', href: '/profile' },
 ]
 
 export const footerNavListItems = [
