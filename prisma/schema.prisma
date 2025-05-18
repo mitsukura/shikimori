@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,46 +7,39 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ユーザーモデル
 model User {
   id        String   @id @default(uuid()) @db.Uuid
-  clerkId   String?  @unique @map("clerk_id")
   isAdmin   Boolean  @default(false) @map("is_admin")
   firstName String   @map("first_name")
   lastName  String   @map("last_name")
   email     String   @unique
   phone     String?
-  bio       String?  @db.Text
-  address   String?
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
-  // リレーション
-  orders Order[]
+  clerkId   String?  @unique @map("clerk_id")
+  address   String?
+  bio       String?
+  orders    Order[]
 
   @@map("users")
 }
 
-// 商品モデル
 model Item {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String      @id @default(uuid()) @db.Uuid
   name        String
   description String?
-  price       Decimal  @db.Decimal(10, 2)
-  imageUrl    String?  @map("image_url")
+  price       Decimal     @db.Decimal(10, 2)
+  imageUrl    String?     @map("image_url")
   category    String?
-  isAvailable Boolean  @default(true) @map("is_available")
-  stock       Int      @default(0)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  // リレーション
-  orderItems OrderItem[]
+  isAvailable Boolean     @default(true) @map("is_available")
+  stock       Int         @default(0)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  orderItems  OrderItem[]
 
   @@map("items")
 }
 
-// 地図/場所モデル
 model Map {
   id        String   @id @default(uuid()) @db.Uuid
   address   String
@@ -60,14 +47,11 @@ model Map {
   image     String?
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
-  // リレーション
-  orders Order[]
+  orders    Order[]
 
   @@map("maps")
 }
 
-// 支払いモデル
 model Payment {
   id                     String    @id @default(uuid()) @db.Uuid
   method                 String
@@ -79,35 +63,29 @@ model Payment {
   stripeCapturedAt       DateTime? @map("stripe_captured_at")
   createdAt              DateTime  @default(now()) @map("created_at")
   updatedAt              DateTime  @updatedAt @map("updated_at")
-
-  // リレーション
-  order   Order?
-  refunds Refund[]
+  order                  Order?
+  refunds                Refund[]
 
   @@map("payments")
 }
 
-// 注文モデル
 model Order {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  mapId     String   @map("map_id") @db.Uuid
-  paymentId String   @unique @map("payment_id") @db.Uuid
-  orderDate DateTime @default(now()) @map("order_date")
-  status    String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  // リレーション
-  user       User        @relation(fields: [userId], references: [id])
+  id         String      @id @default(uuid()) @db.Uuid
+  userId     String      @map("user_id") @db.Uuid
+  mapId      String      @map("map_id") @db.Uuid
+  paymentId  String      @unique @map("payment_id") @db.Uuid
+  orderDate  DateTime    @default(now()) @map("order_date")
+  status     String
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+  orderItems OrderItem[]
   map        Map         @relation(fields: [mapId], references: [id])
   payment    Payment     @relation(fields: [paymentId], references: [id])
-  orderItems OrderItem[]
+  user       User        @relation(fields: [userId], references: [id])
 
   @@map("orders")
 }
 
-// 注文商品モデル
 model OrderItem {
   id           String   @id @default(uuid()) @db.Uuid
   orderId      String   @map("order_id") @db.Uuid
@@ -116,15 +94,12 @@ model OrderItem {
   priceAtOrder Decimal  @map("price_at_order") @db.Decimal(10, 2)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
-
-  // リレーション
-  order Order @relation(fields: [orderId], references: [id])
-  item  Item  @relation(fields: [itemId], references: [id])
+  item         Item     @relation(fields: [itemId], references: [id])
+  order        Order    @relation(fields: [orderId], references: [id])
 
   @@map("order_items")
 }
 
-// 返金モデル
 model Refund {
   id        String   @id @default(uuid()) @db.Uuid
   paymentId String   @map("payment_id") @db.Uuid
@@ -132,9 +107,7 @@ model Refund {
   refundAt  DateTime @default(now()) @map("refund_at")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
-  // リレーション
-  payment Payment @relation(fields: [paymentId], references: [id])
+  payment   Payment  @relation(fields: [paymentId], references: [id])
 
   @@map("refunds")
 }
@@ -142,28 +115,23 @@ model Refund {
 /// 投稿（ブログ記事など）モデル
 model Post {
   id         Int       @id @default(autoincrement())
-  title      String    // タイトル
-  content    String    // 本文
-  createdAt  DateTime  @default(now())      // 作成日時
-  updatedAt  DateTime  @updatedAt           // 更新日時
-
-  // 投稿者（Supabaseのauth.usersテーブルのUUIDを想定）
+  title      String
+  content    String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
   authorId   String
-
-  // カテゴリ（任意）
   categoryId Int?
+  image_url  String?
   category   Category? @relation(fields: [categoryId], references: [id])
 
-  @@map("posts") // Supabaseのテーブル名と一致させる
+  @@map("posts")
 }
 
 /// 投稿カテゴリモデル
 model Category {
-  id    Int    @id @default(autoincrement())
-  name  String @unique          // カテゴリ名（ユニーク）
-
-  // カテゴリに属する投稿一覧
+  id    Int    @id(map: "Category_pkey") @default(autoincrement())
+  name  String @unique(map: "Category_name_key")
   posts Post[]
-  
-  @@map("categories") // Supabaseのテーブル名と一致させる
+
+  @@map("categories")
 }

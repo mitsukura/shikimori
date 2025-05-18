@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 export default function NewBlogPostPage() {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
+  const [imageUrl, setImageUrl] = useState('')
   const [categoryId, setCategoryId] = useState<number | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(false)
@@ -73,6 +74,7 @@ export default function NewBlogPostPage() {
           {
             title,
             content,
+            imageUrl: imageUrl || null,
             authorId: userId,
             categoryId: categoryId || null,
             createdAt: new Date().toISOString(),
@@ -148,6 +150,19 @@ export default function NewBlogPostPage() {
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="imageUrl" className="text-sm font-medium">
+                画像URL（任意）
+              </label>
+              <Input
+                id="imageUrl"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                placeholder="画像のURLを入力（例: https://example.com/image.jpg）"
+              />
+              <p className="text-xs text-gray-500">画像URLを入力すると、記事に画像が表示されます</p>
             </div>
 
             <div className="space-y-2">

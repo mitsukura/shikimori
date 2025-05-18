@@ -81,6 +81,18 @@ export default function BlogPostPage({ params }: { params: Promise<{ id: string 
         <div className="text-sm text-gray-500 dark:text-gray-400 mb-6">
           {format(new Date(post.createdAt), 'yyyy年MM月dd日', { locale: ja })}
         </div>
+        
+        {post.imageUrl && (
+          <div className="my-6">
+            <img 
+              src={post.imageUrl} 
+              alt={post.title} 
+              className="max-w-full h-auto rounded-lg" 
+              style={{ maxHeight: '500px' }} 
+            />
+          </div>
+        )}
+        
         <div className="markdown-content">
           <ReactMarkdown
             rehypePlugins={[rehypeRaw, rehypeSanitize]}
