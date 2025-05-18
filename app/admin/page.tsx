@@ -5,6 +5,7 @@ import { StatCard } from "./components/StatCard";
 import { SalesHistoryTable } from "./components/SalesHistoryTable";
 import { DashboardSection } from "./components/DashboardSection";
 import type { Metadata } from 'next';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: '管理者ダッシュボード',
@@ -14,7 +15,14 @@ export const metadata: Metadata = {
 export default function AdminDashboardPage() {
   return (
     <div className="p-6 space-y-8">
-      <h1 className="text-3xl font-bold mb-6">管理者ダッシュボード</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">管理者ダッシュボード</h1>
+        <div className="flex space-x-4">
+          <Link href="/admin/blog" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center">
+            <span className="mr-2">ブログ記事管理</span>
+          </Link>
+        </div>
+      </div>
       {/* サマリーカード */}
       <DashboardSection className="p-0 shadow-none bg-transparent">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

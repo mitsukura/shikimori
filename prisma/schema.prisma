@@ -164,4 +164,6 @@ model Category {
 
   // カテゴリに属する投稿一覧
   posts Post[]
+  
+  @@map("categories") // Supabaseのテーブル名と一致させる
 }

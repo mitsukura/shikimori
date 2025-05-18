@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { use } from 'react'
+import { useEffect, useState, use } from 'react'
 import { getPostById } from '@/lib/services/post-service'
 import type { Post } from '@/lib/services/post-service'
 import { format } from 'date-fns'
@@ -9,6 +8,10 @@ import { ja } from 'date-fns/locale'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import rehypeRaw from 'rehype-raw'
+import rehypeSanitize from 'rehype-sanitize'
+import remarkGfm from 'remark-gfm'
 
 export default function BlogPostPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
   // paramsをReact.use()でアンラップ
@@ -78,8 +81,14 @@ export default function BlogPostPage({ params }: { params: Promise<{ id: string 
         <div className="text-sm text-gray-500 dark:text-gray-400 mb-6">
           {format(new Date(post.createdAt), 'yyyy年MM月dd日', { locale: ja })}
         </div>
-        {/* 注意: HTMLをサニタイズするライブラリ（DOMPurifyなど）の使用を検討してください */}
-        <div className="whitespace-pre-wrap">{post.content}</div>
+        <div className="markdown-content">
+          <ReactMarkdown
+            rehypePlugins={[rehypeRaw, rehypeSanitize]}
+            remarkPlugins={[remarkGfm]}
+          >
+            {post.content}
+          </ReactMarkdown>
+        </div>
       </article>
     </main>
   )
