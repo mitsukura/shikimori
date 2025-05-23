@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -11,13 +11,14 @@ import { getCategories } from '@/lib/services/post-service'
 import type { Category } from '@/lib/services/post-service'
 import { useEffect } from 'react'
 import { useAuth } from '@clerk/nextjs'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Image as ImageIcon, Upload } from 'lucide-react'
 import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
 import rehypeRaw from 'rehype-raw'
 import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { uploadImage } from '@/lib/upload-service'
 
 export default function NewBlogPostPage() {
   const [title, setTitle] = useState('')
@@ -26,17 +27,17 @@ export default function NewBlogPostPage() {
   const [categoryId, setCategoryId] = useState<number | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('edit')
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const { userId } = useAuth()
 
   useEffect(() => {
     async function fetchCategories() {
       try {
-        console.log('カテゴリ取得開始')
         const categoriesData = await getCategories()
-        console.log('取得したカテゴリデータ:', categoriesData)
         setCategories(categoriesData)
       } catch (error) {
         console.error('カテゴリ取得エラー:', error)
@@ -45,6 +46,62 @@ export default function NewBlogPostPage() {
 
     fetchCategories()
   }, [])
+  
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    
+    const file = files[0]
+    
+    // 画像ファイルかどうかチェック
+    if (!file.type.startsWith('image/')) {
+      setError('画像ファイルを選択してください')
+      return
+    }
+    
+    // ファイルサイズチェック (5MB以下)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('ファイルサイズは5MB以下にしてください')
+      return
+    }
+    
+    try {
+      setUploading(true)
+      setError(null)
+      
+      // サーバーサイドAPIを使用して画像をアップロード
+      const formData = new FormData()
+      formData.append('file', file)
+      
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || '画像のアップロードに失敗しました')
+      }
+      
+      if (data.url) {
+        setImageUrl(data.url)
+      } else {
+        setError('画像のアップロードに失敗しました')
+      }
+    } catch (err) {
+      console.error('画像アップロードエラー:', err)
+      setError('画像のアップロードに失敗しました')
+    } finally {
+      setUploading(false)
+    }
+  }
+  
+  const triggerFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click()
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,30 +124,79 @@ export default function NewBlogPostPage() {
     try {
       setLoading(true)
       setError(null)
+      
+      console.log('送信データ:', {
+        title,
+        content: `${content.substring(0, 50)}...`, // テンプレートリテラルを使用
+        imageUrl,
+        userId,
+        categoryId
+      })
 
+      // データベースの実際のカラム名を確認するためのクエリ
+      const { data: tableInfo, error: tableError } = await supabase
+        .from('posts')
+        .select('*')
+        .limit(1)
+      
+      if (tableError) {
+        console.error('テーブル情報取得エラー:', tableError)
+      } else {
+        console.log('テーブルカラム:', tableInfo.length > 0 ? Object.keys(tableInfo[0]) : '[データなし]')
+      }
+
+      // データの挿入
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const postData: Record<string, unknown> = {
+        title,
+        content,
+        authorId: userId,
+        categoryId: categoryId || null,
+        // updatedAtとcreatedAtはNOT NULL制約があるため追加
+        updatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      }
+      
+      // imageUrlがあれば追加（データベースのカラム名はimage_urlのみ）
+      if (imageUrl) {
+        // データベースのカラム名に合わせる
+        postData.image_url = imageUrl
+        // imageUrlカラムは存在しないのでコメントアウト
+        // postData.imageUrl = imageUrl
+      }
+      
+      console.log('挿入データ:', postData)
+      
       const { data, error: supabaseError } = await supabase
         .from('posts')
-        .insert([
-          {
-            title,
-            content,
-            imageUrl: imageUrl || null,
-            authorId: userId,
-            categoryId: categoryId || null,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          }
-        ])
+        .insert([postData])
         .select()
 
       if (supabaseError) {
-        throw supabaseError
+        console.error('データベースエラー:', supabaseError)
+        throw new Error(`データベースエラー: ${supabaseError.message || JSON.stringify(supabaseError)}`)
       }
+      
+      console.log('作成成功:', data)
 
       router.push('/admin/blog')
     } catch (err) {
       console.error('記事の作成に失敗しました:', err)
-      setError('記事の作成に失敗しました。もう一度お試しください。')
+      
+      // 詳細なエラーメッセージを表示
+      let errorMessage = '記事の作成に失敗しました。'
+      
+      if (err instanceof Error) {
+        errorMessage += ` ${err.message}`
+      } else if (typeof err === 'object' && err !== null) {
+        try {
+          errorMessage += ` ${JSON.stringify(err)}`
+        } catch {
+          errorMessage += ' 詳細不明のエラーが発生しました。'
+        }
+      }
+      
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -152,18 +258,53 @@ export default function NewBlogPostPage() {
               </select>
             </div>
 
-            <div className="space-y-2">
-              <label htmlFor="imageUrl" className="text-sm font-medium">
-                画像URL（任意）
+            <div className="mb-4">
+              <label htmlFor="imageUrl" className="block text-sm font-medium mb-1">
+                サムネイル画像
               </label>
-              <Input
-                id="imageUrl"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="画像のURLを入力（例: https://example.com/image.jpg）"
-              />
-              <p className="text-xs text-gray-500">画像URLを入力すると、記事に画像が表示されます</p>
+              <div className="flex items-center gap-2 mb-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={triggerFileInput}
+                  disabled={uploading}
+                  className="flex items-center gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  {uploading ? '画像をアップロード中...' : '画像をアップロード'}
+                </Button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <Input
+                  id="imageUrl"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="または画像のURLを入力"
+                  className="flex-1"
+                />
+              </div>
+              {imageUrl && (
+                <div className="mt-2">
+                  <p className="text-sm font-medium mb-1">プレビュー</p>
+                  <div className="relative w-full h-48 bg-gray-100 rounded-md overflow-hidden">
+                    <img 
+                      src={imageUrl} 
+                      alt="サムネイルプレビュー" 
+                      className="w-full h-full object-contain aspect-video"
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://placehold.co/600x400?text=画像読み込みエラー'
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
+            <p className="text-xs text-gray-500">画像URLを入力すると、記事に画像が表示されます</p>
 
             <div className="space-y-2">
               <label htmlFor="content" className="text-sm font-medium">

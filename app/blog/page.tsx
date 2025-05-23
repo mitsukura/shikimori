@@ -44,11 +44,23 @@ export default function BlogPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {posts.map((post) => (
             <Link key={post.id} href={`/blog/${post.id}`}>
-              <Card className="h-full hover:shadow-lg transition-shadow duration-300">
-                <div className="p-6">
+              <Card className="h-full hover:shadow-lg transition-shadow duration-300 overflow-hidden flex flex-col">
+                {post.imageUrl && (
+                  <div className="w-full h-48 overflow-hidden">
+                    <img 
+                      src={post.imageUrl} 
+                      alt={post.title} 
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://placehold.co/600x400?text=画像がありません'
+                      }}
+                    />
+                  </div>
+                )}
+                <div className="p-6 flex-1 flex flex-col">
                   <h2 className="text-xl font-semibold mb-2 line-clamp-2">{post.title}</h2>
-                  <p className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3">{post.content}</p>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3 flex-1">{post.content}</p>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-auto">
                     {format(new Date(post.createdAt), 'yyyy年MM月dd日', { locale: ja })}
                   </div>
                 </div>
