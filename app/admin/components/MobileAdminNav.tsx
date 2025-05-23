@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Menu, Home, Package, Users } from 'lucide-react';
+import { Menu, Home, Package, Users, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -17,6 +17,7 @@ const navItems = [
   { href: '/admin', label: 'ホーム', icon: Home },
   { href: '/admin/users', label: 'ユーザー管理', icon: Users },
   { href: '/admin/items', label: '商品管理', icon: Package },
+  { href: '/admin/blog', label: 'ブログ記事管理', icon: FileText },
 ];
 
 export default function MobileAdminNav() {

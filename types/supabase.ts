@@ -14,6 +14,7 @@ export type Database = {
           id: number
           title: string
           content: string
+          imageUrl: string | null
           createdAt: string
           updatedAt: string
           authorId: string
@@ -23,6 +24,7 @@ export type Database = {
           id?: number
           title: string
           content: string
+          imageUrl?: string | null
           createdAt?: string
           updatedAt?: string
           authorId: string
@@ -32,6 +34,7 @@ export type Database = {
           id?: number
           title?: string
           content?: string
+          imageUrl?: string | null
           createdAt?: string
           updatedAt?: string
           authorId?: string

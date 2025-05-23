@@ -1,7 +1,7 @@
 'use client'; // クライアントコンポーネントとしてLinkを使用
 
 import { Button } from '@/components/ui/button';
-import { Home, Package, Users } from 'lucide-react';
+import { Home, Package, Users, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -9,6 +9,7 @@ const navItems = [
   { href: '/admin', label: 'ホーム', icon: Home },
   { href: '/admin/users', label: 'ユーザー管理', icon: Users },
   { href: '/admin/items', label: '商品管理', icon: Package },
+  { href: '/admin/blog', label: 'ブログ記事管理', icon: FileText },
 ];
 
 export default function AdminSidebar() {
